@@ -614,10 +614,10 @@ namespace cpplinq
 		}
 
 		template <typename F, typename K = std::result_of<F(T)>::type>
-		std::unordered_map<K, T> ToUnorderedMap() const
+		std::unordered_map<K, T> ToUnorderedMap(F func) const
 		{
 			std::unordered_map<K, T> ret;
-			std::for_each(this->begin(), this->end(), [&ret](T val) {ret[func(val)] = val; });
+			std::for_each(this->begin(), this->end(), [&ret, &func](T val) {ret[func(val)] = val; });
 			return ret;
 		}
 
@@ -875,10 +875,10 @@ namespace cpplinq
 		}
 
 		template <typename F, typename K = std::result_of<F(T)>::type>
-		std::unordered_map<K, T> ToUnorderedMap() const
+		std::unordered_map<K, T> ToUnorderedMap(F func) const
 		{
 			std::unordered_map<K, T> ret;
-			std::for_each(ref.begin(), ref.end(), [&ret](T val) {ret[func(val)] = val; });
+			std::for_each(ref.begin(), ref.end(), [&ret, &func](T val) {ret[func(val)] = val; });
 			return ret;
 		}
 
