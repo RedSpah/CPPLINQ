@@ -11,6 +11,8 @@
 #include <algorithm>
 #include <numeric>
 
+#include <exception>
+
 namespace cpplinq
 {
 	template <typename T>
@@ -443,7 +445,7 @@ namespace cpplinq
 		T ElementAt(int index) const
 		{
 			if (index < this->size()) {return *this[index]; }
-			else throw std::out_of_range("Index out of range.");
+			else throw std::out_of_range("IEnumberable<T>::ElementAt(int index) | Index out of range.");
 		}
 
 		T ElementAtOrDefault(int index) const
@@ -455,7 +457,7 @@ namespace cpplinq
 		T First() const
 		{
 			if (this->Any()) {return this->front(); }
-			else throw std::exception("empty sequence");
+			else throw std::length_error("IEnumberable<T>::First() | IEnumerable<T> is empty.");
 		}
 
 		template <typename F, typename _A = std::enable_if<std::is_same<std::result_of<F(T)>::type, bool>::value>::type>
@@ -464,7 +466,7 @@ namespace cpplinq
 			auto v = std::find_if(this->begin(), this->end(), func);
 			if (v == this->end())
 			{
-				throw std::exception("no element in sequence satisfies func");
+				throw std::length_error("IEnumberable<T>::First(F func) | No element satisfies the selection function.");
 			}
 			return *v;
 		}
@@ -489,7 +491,7 @@ namespace cpplinq
 		T Last() const
 		{
 			if (this->Any()) {return this->back(); }
-			else throw std::exception("empty sequence");
+			else throw std::length_error("IEnumberable<T>::Last() | IEnumerable<T> is empty.");
 		}
 
 		template <typename F, typename _A = std::enable_if<std::is_same<std::result_of<F(T)>::type, bool>::value>::type>
@@ -498,7 +500,7 @@ namespace cpplinq
 			auto v = std::find_if(this->rbegin(), this->rend(), func);
 			if (v == this->rend())
 			{
-				throw std::exception("no element in sequence satisfies func");
+				throw std::length_error("IEnumberable<T>::Last(F func) | No element satisfies the selection function.");
 			}
 			return *v;
 		}
@@ -523,7 +525,7 @@ namespace cpplinq
 		T Single() const
 		{
 			if (this->size() == 1) { return *this[0]; }
-			else throw exception("Size of IEnumerable<T> wasn't exactly 1");
+			else throw std::length_error("IEnumberable<T>::Single() | Size isn't exactly 1.");
 		}
 
 		template <typename F, typename _A = std::enable_if<std::is_same<std::result_of<F(T)>::type, bool>::value>::type>
@@ -531,16 +533,28 @@ namespace cpplinq
 		{
 			T retval;
 			int n = 0;
-			std::for_each(this->begin(), this->end(), [&retval, &func, &n](T val) {if (func(val) == true) { if (n == 0) { n++; retval = val; } else { throw exception("More than one element matched the selection function in Single(F func)"); } }});
+
+			std::for_each(this->begin(), this->end(), [&retval, &func, &n](T val) 
+			{
+				if (func(val) == true) 
+				{ 
+					if (n == 0) { n++; retval = val; } 
+					else 
+					{ 
+						throw std::length_error("IEnumberable<T>::Single(F func) | More than 1 element matched the selection function."); 
+					} 
+				}
+			});
+
 			if (n == 1) { return retval; }
-			throw exception("No elements matched the selection function in Select(F func)");
+			throw std::length_error("IEnumberable<T>::Single(F func) | No elements matched the selection function.");
 		}
 
 		T SingleOrDefault() const
 		{
 			if (this->size() == 1) { return *this[0]; }
 			else if (this->size() == 0) { return T(); }
-			else throw exception("Size of IEnumerable<T> wasn't exactly 1");
+			else throw std::length_error("IEnumberable<T>::SingleOrDefault() | Size of IEnumerable<T> is bigger than 1.");
 		}
 
 		template <typename F, typename _A = std::enable_if<std::is_same<std::result_of<F(T)>::type, bool>::value>::type>
@@ -548,7 +562,19 @@ namespace cpplinq
 		{
 			T retval;
 			int n = 0;
-			std::for_each(this->begin(), this->end(), [&retval, &func, &n](T val) {if (func(val) == true) { if (n == 0) { n++; retval = val; } else { throw exception("More than one element matched the selection function in Single(F func)"); } }});
+
+			std::for_each(this->begin(), this->end(), [&retval, &func, &n](T val) 
+			{
+				if (func(val) == true) 
+				{ 
+					if (n == 0) { n++; retval = val; } 
+					else 
+					{ 
+						throw std::length_error("IEnumberable<T>::Single(F func) | More than one element matched the selection function.");
+					} 
+				}
+			});
+
 			if (n == 1) { return retval; }
 			else return T();
 		}
@@ -652,6 +678,8 @@ namespace cpplinq
 		template <typename F, typename N = std::result_of<F(T)>, typename _A = std::enable_if<std::is_arithmetic<N>::value>::type>
 		N Average(F func) const
 		{
+			if (this->size() == 0) { throw std::logic_error("IEnumerable<T>::Average(F func) | IEnumerable<T> is empty."); }
+
 			N val = N(0);
 			std::for_each(this->begin(), this->end(), [&val, &func](T v) {val += func(v); });
 			return val / this->size();
@@ -660,12 +688,14 @@ namespace cpplinq
 		template <typename _A = std::enable_if<std::is_arithmetic<T>::value>::type>
 		T Average() const
 		{
+			if (this->size() == 0) { throw std::logic_error("IEnumerable<T>::Average() | IEnumerable<T> is empty."); }
+
 			T val = T(0);
 			std::for_each(this->begin(), this->end(), [&val, &func](T v) {val += v; });
 			return val / this->size();
 		}
 
-		std::size_t Count() const
+		std::size_t Count() const noexcept
 		{
 			return this->size();
 		}
@@ -885,7 +915,7 @@ namespace cpplinq
 		T ElementAt(int index) const
 		{
 			if (index < this->Count()) { return *(ref.begin() + index); }
-			else throw std::out_of_range("Index out of range.");
+			else throw std::out_of_range("RefIEnumberable<T>::ElementAt(int index) | Index out of range.");
 		}
 
 		T ElementAtOrDefault(int index) const
@@ -897,7 +927,7 @@ namespace cpplinq
 		T First() const
 		{
 			if (this->Any()) { return *ref.begin(); }
-			else throw std::exception("empty sequence");
+			else throw std::length_error("RefIEnumberable<T>::First() | The collection referred to by the RefIEnumerable<T> is empty.");
 		}
 
 		template <typename F, typename _A = std::enable_if<std::is_same<std::result_of<F(T)>::type, bool>::value>::type>
@@ -906,7 +936,7 @@ namespace cpplinq
 			auto v = std::find_if(ref.begin(), ref.end(), func);
 			if (v == ref.end())
 			{
-				throw std::exception("no element in sequence satisfies func");
+				throw std::length_error("RefIEnumberable<T>::First(F func) | No element satisfies the selection function.");
 			}
 			return *v;
 		}
@@ -931,7 +961,7 @@ namespace cpplinq
 		T Last() const
 		{
 			if (this->Any()) { return *(ref.rbegin()); }
-			else throw std::exception("empty sequence");
+			else throw std::length_error("RefIEnumberable<T>::Last() | The collection referred to by the RefIEnumerable<T> is empty.");
 		}
 
 		template <typename F, typename _A = std::enable_if<std::is_same<std::result_of<F(T)>::type, bool>::value>::type>
@@ -940,7 +970,7 @@ namespace cpplinq
 			auto v = std::find_if(ref.rbegin(), ref.rend(), func);
 			if (v == ref.rend())
 			{
-				throw std::exception("no element in sequence satisfies func");
+				throw std::length_error("RefIEnumberable<T>::Last(F func) | No element satisfies the selection function.");
 			}
 			return *v;
 		}
@@ -965,7 +995,7 @@ namespace cpplinq
 		T Single() const
 		{
 			if (this->Count() == 1) { return *(ref.begin()); }
-			else throw exception("Size of IEnumerable<T> wasn't exactly 1");
+			else throw std::length_error("RefIEnumberable<T>::Single() | Size isn't exactly 1.");
 		}
 
 		template <typename F, typename _A = std::enable_if<std::is_same<std::result_of<F(T)>::type, bool>::value>::type>
@@ -973,16 +1003,28 @@ namespace cpplinq
 		{
 			T retval;
 			int n = 0;
-			std::for_each(ref.begin(), ref.end(), [&retval, &func, &n](T val) {if (func(val) == true) { if (n == 0) { n++; retval = val; } else { throw exception("More than one element matched the selection function in Single(F func)"); } }});
+
+			std::for_each(ref.begin(), ref.end(), [&retval, &func, &n](T val) 
+			{
+				if (func(val) == true) 
+				{ 
+					if (n == 0) { n++; retval = val; } 
+					else 
+					{ 
+						throw std::length_error("RefIEnumberable<T>::Single(F func) | More than 1 element matched the selection function.");
+					} 
+				}
+			});
+
 			if (n == 1) { return retval; }
-			throw exception("No elements matched the selection function in Select(F func)");
+			throw std::length_error("RefIEnumberable<T>::Single(F func) | No elements matched the selection function.");
 		}
 
 		T SingleOrDefault() const
 		{
 			if (this->Count() == 1) { return *(ref.begin()); }
 			else if (this->Count() == 0) { return T(); }
-			else throw exception("Size of IEnumerable<T> wasn't exactly 1");
+			else throw std::length_error("RefIEnumberable<T>::SingleOrDefault() | Size is bigger than 1.");
 		}
 
 		template <typename F, typename _A = std::enable_if<std::is_same<std::result_of<F(T)>::type, bool>::value>::type>
@@ -990,7 +1032,19 @@ namespace cpplinq
 		{
 			T retval;
 			int n = 0;
-			std::for_each(ref.begin(), ref.end(), [&retval, &func, &n](T val) {if (func(val) == true) { if (n == 0) { n++; retval = val; } else { throw exception("More than one element matched the selection function in Single(F func)"); } }});
+
+			std::for_each(ref.begin(), ref.end(), [&retval, &func, &n](T val) 
+			{
+				if (func(val) == true) 
+				{ 
+					if (n == 0) { n++; retval = val; }
+					else 
+					{ 
+						throw std::length_error("RefIEnumberable<T>::SingleOrDefault(F func) | More than 1 element matched the selection function.");
+					} 
+				}
+			});
+
 			if (n == 1) { return retval; }
 			else return T();
 		}
