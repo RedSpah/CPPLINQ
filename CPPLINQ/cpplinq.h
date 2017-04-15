@@ -14,30 +14,30 @@
 namespace cpplinq
 {
 	template <typename T>
-	struct IEnumerable : std::vector<T>
+	struct IEnumerable : private std::vector<T>
 	{
 		template <typename Iter>
 		IEnumerable(Iter begin, Iter end): std::vector<T>(begin, end) {};
 
 		IEnumerable(std::vector<T>&& m): std::vector<T>(std::move(m)) {};
 
-		IEnumerable() : std::vector<T>() {};
+		IEnumerable(): std::vector<T>() {};
 
-		IEnumerable(const std::vector<T>& vec) : std::vector<T>(vec) {};
+		IEnumerable(const std::vector<T>& vec): std::vector<T>(vec) {};
 
 		/*=== QUERY FUNCTIONS ===*/
 		//		 SORTING
 
-		// Because of complexity of implementing all the boilerplate required to implement 'ThenBy' faithfully, I opted for overloading 'OrderBy' and 'OrderByDescending' to allow for multiple V->K functions, which work just like applying ThenBy to the 'normal' OrderBy 
+		// Because of complexity of implementing all the boilerplate required to implement 'ThenBy' faithfully, I opted for overloading 'OrderBy' and 'OrderByDesending' to allow for multiple V->K functions, which work just like applying ThenBy to the 'normal' OrderBy 
 
-		template <typename F1, typename K1 = std::result_of_t<F1(T)>>
+		template <typename F1, typename K1 = std::result_of<F1(T)>::type>
 		IEnumerable<T>& OrderBy(F1 func1)
 		{
 			std::sort(this->begin(), this->end(), [&func1](T val1, T val2) {return func1(val1) < func1(val2); });
 			return *this;
 		}
 
-		template <typename F1, typename K1 = std::result_of_t<F1(T)>, typename F2, typename K2 = std::result_of_t<F2(T)>>
+		template <typename F1, typename K1 = std::result_of<F1(T)>::type, typename F2, typename K2 = std::result_of<F2(T)>::type>
 		IEnumerable<T>& OrderBy(F1 func1, F2 func2)
 		{
 			std::sort(this->begin(), this->end(), [&func1, &func2](T val1, T val2)
@@ -52,7 +52,7 @@ namespace cpplinq
 			return *this;
 		}
 
-		template <typename F1, typename K1 = std::result_of_t<F1(T)>, typename F2, typename K2 = std::result_of_t<F2(T)>, typename F3, typename K3 = std::result_of_t<F3(T)>>
+		template <typename F1, typename K1 = std::result_of<F1(T)>::type, typename F2, typename K2 = std::result_of<F2(T)>::type, typename F3, typename K3 = std::result_of<F3(T)>::type>
 		IEnumerable<T>& OrderBy(F1 func1, F2 func2, F3 func3)
 		{
 			std::sort(this->begin(), this->end(), [&func1, &func2, &func3](T val1, T val2)
@@ -70,14 +70,14 @@ namespace cpplinq
 			return *this;
 		}
 
-		template <typename F1, typename K1 = std::result_of_t<F1(T)>>
+		template <typename F1, typename K1 = std::result_of<F1(T)>::type>
 		IEnumerable<T>& OrderByDescending(F1 func1)
 		{
 			std::sort(this->begin(), this->end(), [&func1](T val1, T val2) {return func1(val1) > func1(val2); });
 			return *this;
 		}
 
-		template <typename F1, typename K1 = std::result_of_t<F1(T)>, typename F2, typename K2 = std::result_of_t<F2(T)>>
+		template <typename F1, typename K1 = std::result_of<F1(T)>::type, typename F2, typename K2 = std::result_of<F2(T)>::type>
 		IEnumerable<T>& OrderByDescending(F1 func1, F2 func2)
 		{
 			std::sort(this->begin(), this->end(), [&func1, &func2](T val1, T val2)
@@ -92,7 +92,7 @@ namespace cpplinq
 			return *this;
 		}
 
-		template <typename F1, typename K1 = std::result_of_t<F1(T)>, typename F2, typename K2 = std::result_of_t<F2(T)>, typename F3, typename K3 = std::result_of_t<F3(T)>>
+		template <typename F1, typename K1 = std::result_of<F1(T)>::type, typename F2, typename K2 = std::result_of<F2(T)>::type, typename F3, typename K3 = std::result_of<F3(T)>::type>
 		IEnumerable<T>& OrderByDescending(F1 func1, F2 func2, F3 func3)
 		{
 			std::sort(this->begin(), this->end(), [&func1, &func2, &func3](T val1, T val2)
@@ -121,8 +121,8 @@ namespace cpplinq
 		IEnumerable<T> Except(IEnumerable<T> other)
 		{
 			IEnumerable<T> ret;
-			std::sort(this->begin()), this->end());
-			std::sort(other.begin()), other.end());
+			std::sort(this->begin(), this->end());
+			std::sort(other.begin(), other.end());
 			std::set_difference(this->begin(), this->end(), other.begin(), other.end(), std::back_inserter(ret));
 			return ret;
 		}
@@ -130,8 +130,8 @@ namespace cpplinq
 		IEnumerable<T> Intersect(IEnumerable<T> other)
 		{
 			IEnumerable<T> ret;
-			std::sort(this->begin()), this->end());
-			std::sort(other.begin()), other.end());
+			std::sort(this->begin(), this->end());
+			std::sort(other.begin(), other.end());
 			std::set_intersection(this->begin(), this->end(), other.begin(), other.end(), std::back_inserter(ret));
 			return ret;
 		}
@@ -139,8 +139,8 @@ namespace cpplinq
 		IEnumerable<T> Union(IEnumerable<T> other)
 		{
 			IEnumerable<T> ret;
-			std::sort(this->begin()), this->end());
-			std::sort(other.begin()), other.end());
+			std::sort(this->begin(), this->end());
+			std::sort(other.begin(), other.end());
 			std::set_union(this->begin(), this->end(), other.begin(), other.end(), std::back_inserter(ret));
 			return ret;
 		}
@@ -176,24 +176,24 @@ namespace cpplinq
 
 		//		 QUANTIFIER OPERATIONS
 
-		template <typename F, typename _A = std::enable_if<std::is_same<std::result_of_t<F(T)>, bool>::value>::type>
-		bool All(F func)
+		template <typename F, typename _A = std::enable_if<std::is_same<std::result_of<F(T)>::type, bool>::value>::type>
+		bool All(F func) const
 		{
 			return std::all_of(this->begin(), this->end(), func);
 		}
 
-		bool Any()
+		bool Any() const
 		{
 			return this->size() > 0;
 		}
 
-		template <typename F, typename _A = std::enable_if<std::is_same<std::result_of_t<F(T)>, bool>::value>::type>
-		bool Any(F func)
+		template <typename F, typename _A = std::enable_if<std::is_same<std::result_of<F(T)>::type, bool>::value>::type>
+		bool Any(F func) const
 		{
 			return std::any_of(this->begin(), this->end(), func);
 		}
 
-		bool Contains(T val)
+		bool Contains(T val) const
 		{
 			return std::find(this->begin(), this->end(), val) != this->end();
 		}
@@ -309,7 +309,7 @@ namespace cpplinq
 		}
 
 		// ordinary version
-		template <typename F, typename _A = std::enable_if<std::is_same<std::result_of_t<F(T)>, bool>::value>::type>
+		template <typename F, typename _A = std::enable_if<std::is_same<std::result_of<F(T)>::type, bool>::value>::type>
 		IEnumerable<T>& TakeWhile(F func)
 		{
 			this->erase(std::find_if_not(this->begin(), this->end(), func), this->end());
@@ -317,7 +317,7 @@ namespace cpplinq
 		}
 
 		// func takes a second parameter, which is the zero-based index of the element
-		template <typename F, typename _A = std::enable_if<std::is_same<std::result_of_t<F(T, int)>, bool>::value>::type, typename = void>
+		template <typename F, typename _A = std::enable_if<std::is_same<std::result_of<F(T, int)>::type, bool>::value>::type, typename = void>
 		IEnumerable<T>& TakeWhile(F func)
 		{
 			int n = 0;
@@ -326,7 +326,7 @@ namespace cpplinq
 		}
 
 		// ordinary version
-		template <typename F, typename _A = std::enable_if<std::is_same<std::result_of_t<F(T)>, bool>::value>::type>
+		template <typename F, typename _A = std::enable_if<std::is_same<std::result_of<F(T)>::type, bool>::value>::type>
 		IEnumerable<T>& SkipWhile(F func)
 		{
 			this->erase(this->begin(), std::find_if_not(this->begin(), this->end(), func));
@@ -334,7 +334,7 @@ namespace cpplinq
 		}
 
 		// func takes a second parameter, which is the zero-based index of the element
-		template <typename F, typename _A = std::enable_if<std::is_same<std::result_of_t<F(T, int)>, bool>::value>::type, typename = void>
+		template <typename F, typename _A = std::enable_if<std::is_same<std::result_of<F(T, int)>::type, bool>::value>::type, typename = void>
 		IEnumerable<T>& SkipWhile(F func)
 		{
 			int n = 0;
@@ -344,7 +344,7 @@ namespace cpplinq
 
 		//		 JOIN OPERATORS
 
-		template <typename FOuterKey, typename FInnerKey, typename FJoin, typename TInner, typename TOuter = T, typename TKey = std::result_of_t<FOuterKey(TOuter)>, typename TJoined = std::result_of_t<FJoin(TOuter, TInner)>, typename _AInnerKey = std::enable_if<std::is_same<std::result_of_t<FInnerKey(TInner)>, TKey>::value>::type>
+		template <typename FOuterKey, typename FInnerKey, typename FJoin, typename TInner, typename TOuter = T, typename TKey = std::result_of<FOuterKey(TOuter)>::type, typename TJoined = std::result_of<FJoin(TOuter, TInner)>::type, typename _AInnerKey = std::enable_if<std::is_same<std::result_of<FInnerKey(TInner)>::type, TKey>::value>::type>
 		IEnumerable<TJoined> Join(IEnumerable<TInner> innerkeys, FOuterKey outerkeyselector, FInnerKey innerkeyselector, FJoin joiner)
 		{
 			IEnumerable<TJoined> ret; 
@@ -363,7 +363,7 @@ namespace cpplinq
 			return ret;
 		}
 
-		template <typename FOuterKey, typename FInnerKey, typename FJoin, typename TInner, typename TOuter = T, typename TKey = std::result_of_t<FOuterKey(TOuter)>, typename TJoined = std::result_of_t<FJoin(TOuter, IEnumerable<TInner>)>, typename _AInnerKey = std::enable_if<std::is_same<std::result_of_t<FInnerKey(TInner)>, TKey>::value>::type>
+		template <typename FOuterKey, typename FInnerKey, typename FJoin, typename TInner, typename TOuter = T, typename TKey = std::result_of<FOuterKey(TOuter)>::type, typename TJoined = std::result_of<FJoin(TOuter, IEnumerable<TInner>)>::type, typename _AInnerKey = std::enable_if<std::is_same<std::result_of<FInnerKey(TInner)>::type, TKey>::value>::type>
 		IEnumerable<TJoined> GroupJoin(IEnumerable<TInner> innerkeys, FOuterKey outerkeyselector, FInnerKey innerkeyselector, FJoin joiner)
 		{
 			IEnumerable<TJoined> ret;
@@ -433,33 +433,33 @@ namespace cpplinq
 
 		//		 EQUALITY OPERATORS	
 
-		bool SequenceEqual(IEnumerable<T> other)
+		bool SequenceEqual(IEnumerable<T> other) const
 		{
 			return std::equal(this->begin(), this->end(), other->begin());
 		}
 
 		//		 ELEMENT OPERATORS
 
-		T ElementAt(int index)
+		T ElementAt(int index) const
 		{
-			if (index < this->size())) {return *this[index]; }
+			if (index < this->size()) {return *this[index]; }
 			else throw std::out_of_range("Index out of range.");
 		}
 
-		T ElementAtOrDefault(int index)
+		T ElementAtOrDefault(int index) const
 		{
-			if (index < this->size())) {return *this[index]; }
+			if (index < this->size()) {return *this[index]; }
 			else return T();
 		}
 
-		T First()
+		T First() const
 		{
-			if (this->Any())) {return this->front(); }
+			if (this->Any()) {return this->front(); }
 			else throw std::exception("empty sequence");
 		}
 
-		template <typename F, typename _A = std::enable_if<std::is_same<std::result_of_t<F(T)>, bool>::value>::type>
-		T First(F func)
+		template <typename F, typename _A = std::enable_if<std::is_same<std::result_of<F(T)>::type, bool>::value>::type>
+		T First(F func) const
 		{
 			auto v = std::find_if(this->begin(), this->end(), func);
 			if (v == this->end())
@@ -469,14 +469,14 @@ namespace cpplinq
 			return *v;
 		}
 
-		T FirstOrDefault()
+		T FirstOrDefault() const
 		{
-			if (this->Any())) {return this->front(); }
+			if (this->Any()) {return this->front(); }
 			else return T();
 		}
 
-		template <typename F, typename _A = std::enable_if<std::is_same<std::result_of_t<F(T)>, bool>::value>::type>
-		T FirstOrDefault(F func)
+		template <typename F, typename _A = std::enable_if<std::is_same<std::result_of<F(T)>::type, bool>::value>::type>
+		T FirstOrDefault(F func) const
 		{
 			auto v = std::find_if(this->begin(), this->end(), func);
 			if (v == this->end())
@@ -486,14 +486,14 @@ namespace cpplinq
 			return *v;
 		}
 
-		T Last()
+		T Last() const
 		{
-			if (this->Any())) {return this->back(); }
+			if (this->Any()) {return this->back(); }
 			else throw std::exception("empty sequence");
 		}
 
-		template <typename F, typename _A = std::enable_if<std::is_same<std::result_of_t<F(T)>, bool>::value>::type>
-		T Last(F func)
+		template <typename F, typename _A = std::enable_if<std::is_same<std::result_of<F(T)>::type, bool>::value>::type>
+		T Last(F func) const
 		{
 			auto v = std::find_if(this->rbegin(), this->rend(), func);
 			if (v == this->rend())
@@ -503,14 +503,14 @@ namespace cpplinq
 			return *v;
 		}
 
-		T LastOrDefault()
+		T LastOrDefault() const
 		{
-			if (this->Any())) {return this->back(); }
+			if (this->Any()) {return this->back(); }
 			else return T();
 		}
 
-		template <typename F, typename _A = std::enable_if<std::is_same<std::result_of_t<F(T)>, bool>::value>::type>
-		T LastOrDefault(F func)
+		template <typename F, typename _A = std::enable_if<std::is_same<std::result_of<F(T)>::type, bool>::value>::type>
+		T LastOrDefault(F func) const
 		{
 			auto v = std::find_if(this->rbegin(), this->rend(), func);
 			if (v == this->rend())
@@ -520,14 +520,14 @@ namespace cpplinq
 			return *v;
 		}
 
-		T Single()
+		T Single() const
 		{
 			if (this->size() == 1) { return *this[0]; }
 			else throw exception("Size of IEnumerable<T> wasn't exactly 1");
 		}
 
-		template <typename F, typename _A = std::enable_if<std::is_same<std::result_of_t<F(T)>, bool>::value>::type>
-		T Single(F func)
+		template <typename F, typename _A = std::enable_if<std::is_same<std::result_of<F(T)>::type, bool>::value>::type>
+		T Single(F func) const
 		{
 			T retval;
 			int n = 0;
@@ -536,15 +536,15 @@ namespace cpplinq
 			throw exception("No elements matched the selection function in Select(F func)");
 		}
 
-		T SingleOrDefault()
+		T SingleOrDefault() const
 		{
 			if (this->size() == 1) { return *this[0]; }
 			else if (this->size() == 0) { return T(); }
 			else throw exception("Size of IEnumerable<T> wasn't exactly 1");
 		}
 
-		template <typename F, typename _A = std::enable_if<std::is_same<std::result_of_t<F(T)>, bool>::value>::type>
-		T SingleOrDefault(F func)
+		template <typename F, typename _A = std::enable_if<std::is_same<std::result_of<F(T)>::type, bool>::value>::type>
+		T SingleOrDefault(F func) const
 		{
 			T retval;
 			int n = 0;
@@ -570,44 +570,51 @@ namespace cpplinq
 			return std::vector<T>(std::move(*this));
 		}
 
-		std::list<T> ToList()
+		std::vector<T> ToVectorNotConsume() const
+		{
+			std::vector<T> ret;
+			std::for_each(this->begin(), this->end(), [&ret](T val) {ret.push_back(val); });
+			return ret;
+		}
+
+		std::list<T> ToList() const
 		{
 			std::list<T> ret;
 			std::for_each(this->begin(), this->end(), [&ret](T val) {ret.push_back(val); });
 			return ret;
 		}
 
-		std::forward_list<T> ToForwardList()
+		std::forward_list<T> ToForwardList() const
 		{
 			std::forward_list<T> ret;
 			std::for_each(this->begin(), this->end(), [&ret](T val) {ret.push_back(val); });
 			return ret;
 		}
 
-		std::set<T> ToSet()
+		std::set<T> ToSet() const
 		{
 			std::set<T> ret;
 			std::for_each(this->begin(), this->end(), [&ret](T val) {ret.insert(val); });
 			return ret;
 		}
 
-		std::unordered_set<T> ToUnorderedSet()
+		std::unordered_set<T> ToUnorderedSet() const
 		{
 			std::unordered_set<T> ret;
 			std::for_each(this->begin(), this->end(), [&ret](T val) {ret.insert(val); });
 			return ret;
 		}
 
-		template <typename F, typename K = std::result_of_t<F(T)>>
-		std::map<K, T> ToMap(F func)
+		template <typename F, typename K = std::result_of<F(T)>::type>
+		std::map<K, T> ToMap(F func) const
 		{
 			std::map<K, T> ret;
 			std::for_each(this->begin(), this->end(), [&ret, &func](T val) {ret[func(val)] = val; });
 			return ret;
 		}
 
-		template <typename F, typename K = std::result_of_t<F(T)>>
-		std::unordered_map<K, T> ToUnorderedMap()
+		template <typename F, typename K = std::result_of<F(T)>::type>
+		std::unordered_map<K, T> ToUnorderedMap() const
 		{
 			std::unordered_map<K, T> ret;
 			std::for_each(this->begin(), this->end(), [&ret](T val) {ret[func(val)] = val; });
@@ -624,26 +631,26 @@ namespace cpplinq
 
 		//		AGGREGATION OPERATORS
 
-		template <typename F, typename _A = std::enable_if<std::is_same<std::result_of_t<F(T, T)>, T>::value>::type>
-		T Aggregate(F func)
+		template <typename F, typename _A = std::enable_if<std::is_same<std::result_of<F(T, T)>::type, T>::value>::type>
+		T Aggregate(F func) const
 		{
 			return std::accumulate(this->begin(), this->end(), T(), func);
 		}
 
-		template <typename F, typename V, typename _A = std::enable_if<std::is_same<std::result_of_t<F(V, T)>, V>::value>::type>
-		V Aggregate(V val, F func)
+		template <typename F, typename V, typename _A = std::enable_if<std::is_same<std::result_of<F(V, T)>::type, V>::value>::type>
+		V Aggregate(V val, F func) const
 		{
 			return std::accumulate(this->begin(), this->end(), val, func);
 		}
 
-		template <typename F, typename R, typename V, typename E = std::result_of_t<R(V)>, typename _A = std::enable_if<std::is_same<std::result_of_t<F(V, T)>, V>::value>::type>
-		E Aggregate(V val, F func, R retfunc)
+		template <typename F, typename R, typename V, typename E = std::result_of<R(V)>, typename _A = std::enable_if<std::is_same<std::result_of<F(V, T)>::type, V>::value>::type>
+		E Aggregate(V val, F func, R retfunc) const
 		{
 			return retfunc(std::accumulate(this->begin(), this->end(), val, func));
 		}
 
-		template <typename F, typename N = std::result_of_t<F(T)>, typename _A = std::enable_if<std::is_arithmetic<N>::value>::type>
-		N Average(F func)
+		template <typename F, typename N = std::result_of<F(T)>, typename _A = std::enable_if<std::is_arithmetic<N>::value>::type>
+		N Average(F func) const
 		{
 			N val = N(0);
 			std::for_each(this->begin(), this->end(), [&val, &func](T v) {val += func(v); });
@@ -651,26 +658,26 @@ namespace cpplinq
 		}
 
 		template <typename _A = std::enable_if<std::is_arithmetic<T>::value>::type>
-		T Average()
+		T Average() const
 		{
 			T val = T(0);
 			std::for_each(this->begin(), this->end(), [&val, &func](T v) {val += v; });
 			return val / this->size();
 		}
 
-		std::size_t Count()
+		std::size_t Count() const
 		{
 			return this->size();
 		}
 
-		template <typename F, typename _A = std::enable_if<std::is_same<std::result_of_t<F(T)>, bool>::value>::type>
-		std::size_t Count(F func)
+		template <typename F, typename _A = std::enable_if<std::is_same<std::result_of<F(T)>::type, bool>::value>::type>
+		std::size_t Count(F func) const
 		{
 			return std::accumulate(this->begin(), this->end(), 0, [&func](int a, T val) {if (func(val)) { return ++a; } else return a; });
 		}
 
-		template <typename F, typename N = std::result_of_t<F(T)>, typename _A = std::enable_if<std::is_arithmetic<N>::value>::type>
-		N Max(F func)
+		template <typename F, typename N = std::result_of<F(T)>::type, typename _A = std::enable_if<std::is_arithmetic<N>::value>::type>
+		N Max(F func) const
 		{
 			N val;
 			bool first = false;
@@ -679,7 +686,7 @@ namespace cpplinq
 		}
 
 		template <typename _A = std::enable_if<std::is_arithmetic<T>::value>::type>
-		T Max()
+		T Max() const
 		{
 			T val;
 			bool first = false;
@@ -687,8 +694,8 @@ namespace cpplinq
 			return val;
 		}
 
-		template <typename F, typename N = std::result_of_t<F(T)>, typename _A = std::enable_if<std::is_arithmetic<N>::value>::type>
-		N Min(F func)
+		template <typename F, typename N = std::result_of<F(T)>::type, typename _A = std::enable_if<std::is_arithmetic<N>::value>::type>
+		N Min(F func) const
 		{
 			N val;
 			bool first = false;
@@ -697,7 +704,7 @@ namespace cpplinq
 		}
 
 		template <typename _A = std::enable_if<std::is_arithmetic<T>::value>::type>
-		T Min()
+		T Min() const
 		{
 			T val;
 			bool first = false;
@@ -705,8 +712,8 @@ namespace cpplinq
 			return val;
 		}
 
-		template <typename F, typename N = std::result_of_t<F(T)>, typename _A = std::enable_if<std::is_arithmetic<N>::value>::type>
-		N Sum(F func)
+		template <typename F, typename N = std::result_of<F(T)>::type, typename _A = std::enable_if<std::is_arithmetic<N>::value>::type>
+		N Sum(F func) const
 		{
 			N val = N(0);
 			std::for_each(this->begin(), this->end(), [&val, &func](T v) {val += func(v); });
@@ -714,7 +721,7 @@ namespace cpplinq
 		}
 
 		template <typename _A = std::enable_if<std::is_arithmetic<T>::value>::type>
-		T Sum()
+		T Sum() const
 		{
 			T val = T(0);
 			std::for_each(this->begin(), this->end(), [&val, &func](T v) {val += v; });
@@ -722,15 +729,326 @@ namespace cpplinq
 		}
 	};
 
-	template <typename T>
-	IEnumerable<T> LINQ(const std::vector<T>& vec)
+	template <typename Cont, bool Const = std::is_const<Cont>::value, typename T = std::decay<decltype(*(std::declval<Cont>().begin()))>::type>
+	struct RefIEnumerable
 	{
-		return IEnumerable<T>(vec.begin(), vec.end());
+		RefIEnumerable(Cont& cont) : ref(cont) {};
+
+		template <typename F, typename _A = std::enable_if<std::is_same<std::result_of<F(T, T)>::type, T>::value>::type>
+		T Aggregate(F func) const
+		{
+			return std::accumulate(ref.begin(), ref.end(), T(), func);
+		}
+
+		template <typename F, typename V, typename _A = std::enable_if<std::is_same<std::result_of<F(V, T)>::type, V>::value>::type>
+		V Aggregate(V val, F func) const
+		{
+			return std::accumulate(ref.begin(), ref.end(), val, func);
+		}
+
+		template <typename F, typename R, typename V, typename E = std::result_of<R(V)>, typename _A = std::enable_if<std::is_same<std::result_of<F(V, T)>::type, V>::value>::type>
+		E Aggregate(V val, F func, R retfunc) const
+		{
+			return retfunc(std::accumulate(ref.begin(), ref.end(), val, func));
+		}
+
+		template <typename F, typename N = std::result_of<F(T)>, typename _A = std::enable_if<std::is_arithmetic<N>::value>::type>
+		N Average(F func) const
+		{
+			N val = N(0);
+			std::for_each(ref.begin(), ref.end(), [&val, &func](T v) {val += func(v); });
+			return val / this->Count();
+		}
+
+		template <typename _A = std::enable_if<std::is_arithmetic<T>::value>::type>
+		T Average() const
+		{
+			T val = T(0);
+			std::for_each(ref.begin(), ref.end(), [&val, &func](T v) {val += v; });
+			return val / this->Count();
+		}
+
+		std::size_t Count() const
+		{
+			return ref.end() - ref.begin();
+		}
+
+		template <typename F, typename _A = std::enable_if<std::is_same<std::result_of<F(T)>::type, bool>::value>::type>
+		std::size_t Count(F func) const
+		{
+			return std::accumulate(ref.begin(), ref.end(), 0, [&func](int a, T val) {if (func(val)) { return ++a; } else return a; });
+		}
+
+		template <typename F, typename N = std::result_of<F(T)>::type, typename _A = std::enable_if<std::is_arithmetic<N>::value>::type>
+		N Max(F func) const
+		{
+			N val;
+			bool first = false;
+			std::for_each(ref.begin(), ref.end(), [&val, &first, &func](T v) {if (!first) { first = true; val = func(v); } else { val = std::max(val, func(v)); }});
+			return val;
+		}
+
+		template <typename _A = std::enable_if<std::is_arithmetic<T>::value>::type>
+		T Max() const
+		{
+			T val;
+			bool first = false;
+			std::for_each(ref.begin(), ref.end(), [&val, &first, &func](T v) {if (!first) { first = true; val = v; } else { val = std::max(val, v); }});
+			return val;
+		}
+
+		template <typename F, typename N = std::result_of<F(T)>::type, typename _A = std::enable_if<std::is_arithmetic<N>::value>::type>
+		N Min(F func) const
+		{
+			N val;
+			bool first = false;
+			std::for_each(ref.begin(), ref.end(), [&val, &first, &func](T v) {if (!first) { first = true; val = func(v); } else { val = std::min(val, func(v)); }});
+			return val;
+		}
+
+		template <typename _A = std::enable_if<std::is_arithmetic<T>::value>::type>
+		T Min() const
+		{
+			T val;
+			bool first = false;
+			std::for_each(ref.begin(), ref.end(), [&val, &first, &func](T v) {if (!first) { first = true; val = v; } else { val = std::min(val, v); }});
+			return val;
+		}
+
+		template <typename F, typename N = std::result_of<F(T)>::type, typename _A = std::enable_if<std::is_arithmetic<N>::value>::type>
+		N Sum(F func) const
+		{
+			N val = N(0);
+			std::for_each(ref.begin(), ref.end(), [&val, &func](T v) {val += func(v); });
+			return val;
+		}
+
+		template <typename _A = std::enable_if<std::is_arithmetic<T>::value>::type>
+		T Sum() const
+		{
+			T val = T(0);
+			std::for_each(ref.begin(), ref.end(), [&val, &func](T v) {val += v; });
+			return val;
+		}
+
+		std::vector<T> ToVector() const
+		{
+			std::vector<T> ret;
+			std::for_each(ref.begin(), ref.end(), [&ret](T val) {ret.push_back(val); });
+			return ret;
+		}
+
+		std::list<T> ToList() const
+		{
+			std::list<T> ret;
+			std::for_each(ref.begin(), ref.end(), [&ret](T val) {ret.push_back(val); });
+			return ret;
+		}
+
+		std::forward_list<T> ToForwardList() const
+		{
+			std::forward_list<T> ret;
+			std::for_each(ref.begin(), ref.end(), [&ret](T val) {ret.push_back(val); });
+			return ret;
+		}
+
+		std::set<T> ToSet() const
+		{
+			std::set<T> ret;
+			std::for_each(ref.begin(), ref.end(), [&ret](T val) {ret.insert(val); });
+			return ret;
+		}
+
+		std::unordered_set<T> ToUnorderedSet() const
+		{
+			std::unordered_set<T> ret;
+			std::for_each(ref.begin(), ref.end(), [&ret](T val) {ret.insert(val); });
+			return ret;
+		}
+
+		template <typename F, typename K = std::result_of<F(T)>::type>
+		std::map<K, T> ToMap(F func) const
+		{
+			std::map<K, T> ret;
+			std::for_each(ref.begin(), ref.end(), [&ret, &func](T val) {ret[func(val)] = val; });
+			return ret;
+		}
+
+		template <typename F, typename K = std::result_of<F(T)>::type>
+		std::unordered_map<K, T> ToUnorderedMap() const
+		{
+			std::unordered_map<K, T> ret;
+			std::for_each(ref.begin(), ref.end(), [&ret](T val) {ret[func(val)] = val; });
+			return ret;
+		}
+
+		T ElementAt(int index) const
+		{
+			if (index < this->Count()) { return *(ref.begin() + index); }
+			else throw std::out_of_range("Index out of range.");
+		}
+
+		T ElementAtOrDefault(int index) const
+		{
+			if (index < this->Count()) { return *(ref.begin() + index); }
+			else return T();
+		}
+
+		T First() const
+		{
+			if (this->Any()) { return *ref.begin(); }
+			else throw std::exception("empty sequence");
+		}
+
+		template <typename F, typename _A = std::enable_if<std::is_same<std::result_of<F(T)>::type, bool>::value>::type>
+		T First(F func) const
+		{
+			auto v = std::find_if(ref.begin(), ref.end(), func);
+			if (v == ref.end())
+			{
+				throw std::exception("no element in sequence satisfies func");
+			}
+			return *v;
+		}
+
+		T FirstOrDefault() const
+		{
+			if (this->Any()) { return *ref.begin(); }
+			else return T();
+		}
+
+		template <typename F, typename _A = std::enable_if<std::is_same<std::result_of<F(T)>::type, bool>::value>::type>
+		T FirstOrDefault(F func) const
+		{
+			auto v = std::find_if(ref.begin(), ref.end(), func);
+			if (v == ref.end())
+			{
+				return T();
+			}
+			return *v;
+		}
+
+		T Last() const
+		{
+			if (this->Any()) { return *(ref.rbegin()); }
+			else throw std::exception("empty sequence");
+		}
+
+		template <typename F, typename _A = std::enable_if<std::is_same<std::result_of<F(T)>::type, bool>::value>::type>
+		T Last(F func) const
+		{
+			auto v = std::find_if(ref.rbegin(), ref.rend(), func);
+			if (v == ref.rend())
+			{
+				throw std::exception("no element in sequence satisfies func");
+			}
+			return *v;
+		}
+
+		T LastOrDefault() const
+		{
+			if (this->Any()) { return *(ref.rbegin()); }
+			else return T();
+		}
+
+		template <typename F, typename _A = std::enable_if<std::is_same<std::result_of<F(T)>::type, bool>::value>::type>
+		T LastOrDefault(F func) const
+		{
+			auto v = std::find_if(ref.rbegin(), ref.rend(), func);
+			if (v == ref.rend())
+			{
+				return T();
+			}
+			return *v;
+		}
+
+		T Single() const
+		{
+			if (this->Count() == 1) { return *(ref.begin()); }
+			else throw exception("Size of IEnumerable<T> wasn't exactly 1");
+		}
+
+		template <typename F, typename _A = std::enable_if<std::is_same<std::result_of<F(T)>::type, bool>::value>::type>
+		T Single(F func) const
+		{
+			T retval;
+			int n = 0;
+			std::for_each(ref.begin(), ref.end(), [&retval, &func, &n](T val) {if (func(val) == true) { if (n == 0) { n++; retval = val; } else { throw exception("More than one element matched the selection function in Single(F func)"); } }});
+			if (n == 1) { return retval; }
+			throw exception("No elements matched the selection function in Select(F func)");
+		}
+
+		T SingleOrDefault() const
+		{
+			if (this->Count() == 1) { return *(ref.begin()); }
+			else if (this->Count() == 0) { return T(); }
+			else throw exception("Size of IEnumerable<T> wasn't exactly 1");
+		}
+
+		template <typename F, typename _A = std::enable_if<std::is_same<std::result_of<F(T)>::type, bool>::value>::type>
+		T SingleOrDefault(F func) const
+		{
+			T retval;
+			int n = 0;
+			std::for_each(ref.begin(), ref.end(), [&retval, &func, &n](T val) {if (func(val) == true) { if (n == 0) { n++; retval = val; } else { throw exception("More than one element matched the selection function in Single(F func)"); } }});
+			if (n == 1) { return retval; }
+			else return T();
+		}
+
+		template <typename F, typename _A = std::enable_if<std::is_same<std::result_of<F(T)>::type, bool>::value>::type>
+		bool All(F func) const
+		{
+			return std::all_of(ref.begin(), ref.end(), func);
+		}
+
+		bool Any() const
+		{
+			return this->Count() > 0;
+		}
+
+		template <typename F, typename _A = std::enable_if<std::is_same<std::result_of<F(T)>::type, bool>::value>::type>
+		bool Any(F func) const
+		{
+			return std::any_of(ref.begin(), ref.end(), func);
+		}
+
+		bool Contains(T val) const
+		{
+			return std::find(ref.begin(), ref.end(), val) != ref.end();
+		}
+
+		IEnumerable<T> Copy()
+		{
+			return IEnumerable<T>(ref.begin(), ref.end());
+		}
+
+	/*	template <typename _A1 = std::enable_if<std::is_same<Cont, std::vector<T>>::value>::type, typename _A2 = std::enable_if<!Const>::type>
+		IEnumerable<T> Consume()
+		{
+			return IEnumerable<T>(std::move(ref));
+		} */
+
+	private:
+		Cont& ref;
+	};
+
+	template <typename Cont, typename _A1 = decltype(*(std::declval<Cont>().begin())), typename _A2 = decltype(*(std::declval<Cont>().end())), typename _A3 = std::enable_if<std::is_same<_A1, _A2>::value>::type>
+	RefIEnumerable<Cont> LINQ(Cont& cont)
+	{
+		return RefIEnumerable<Cont>(cont);
+	}
+
+	template <typename Cont, typename _A1 = decltype(*(std::declval<Cont>().begin())), typename _A2 = decltype(*(std::declval<Cont>().end())), typename _A3 = std::enable_if<std::is_same<_A1, _A2>::value>::type, typename T = std::decay<_A1>::type>
+	IEnumerable<T> LINQ(Cont&& cont)
+	{
+		IEnumerable<T> ret;
+		std::for_each(cont.begin(), cont.end(), [](T val) {ret.push_back(val); });
+		return ret;
 	}
 
 	template <typename T>
-	IEnumerable<T> LINQ(std::vector<T>&& vec)
+	IEnumerable<T> LINQ(std::vector<T>&& cont)
 	{
-		return IEnumerable<T>(std::move(vec));
+		return IEnumerable<T>(std::forward(cont));
 	}
 }
