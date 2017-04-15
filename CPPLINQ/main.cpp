@@ -20,10 +20,15 @@ int main()
 	std::vector<int> i{ 0,1,2,3,4,5,6,7,8,9,10 };
 	std::vector<int> k{ 1,2,3,4,5,6,7,8,9,10 };
 
-	auto s = LINQ(i).Concat(k).Where([](int x) {return x < 9; }).Where([](int x, int i) {return (x + i) > 9; }).ToVector();
+	
+
+	//int a1 = LINQ(i).Aggregate([](int a, int v) {return a + v; });
+	//int a2 = LINQ(i).Aggregate(31, [](int a, int v) {return a + v; });
+	std::vector<int> a3 = LINQ(i).Concat(k).Distinct().ToVector();
+	//auto y = LINQ(colv).SelectMany([](colstr c, int i) {return c.ints; }, [](colstr c, int i) {return i + c.ints[0]; }).ToVector();
 
 
-	for (auto c : s) 
+	for (auto c : a3) 
 	{ 
 		cout << c << " ";
 		//cout << c.first << " ";
