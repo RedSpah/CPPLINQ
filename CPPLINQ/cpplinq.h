@@ -16,6 +16,12 @@
 
 namespace cpplinq
 {
+	template <typename T>
+	struct IEnumerable;
+
+	template <typename C, bool B, typename T>
+	struct RefIEnumerable;
+
 	template <typename ACont, typename _A, typename Cont, typename T>
 	IEnumerable<T> LINQ(ACont cont);
 
