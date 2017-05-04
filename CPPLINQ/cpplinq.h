@@ -123,6 +123,7 @@ namespace cpplinq
 		IEnumerable<T> Except(IEnumerable<T> other)
 		{
 			IEnumerable<T> ret;
+			ret.reserve(this->size() + other->size() / 2); // RESERVE
 			std::sort(this->begin(), this->end());
 			std::sort(other.begin(), other.end());
 			std::set_difference(this->begin(), this->end(), other.begin(), other.end(), std::back_inserter(ret));
@@ -132,6 +133,7 @@ namespace cpplinq
 		IEnumerable<T> Intersect(IEnumerable<T> other)
 		{
 			IEnumerable<T> ret;
+			ret.reserve(this->size() + other->size() / 2); // RESERVE
 			std::sort(this->begin(), this->end());
 			std::sort(other.begin(), other.end());
 			std::set_intersection(this->begin(), this->end(), other.begin(), other.end(), std::back_inserter(ret));
@@ -141,6 +143,7 @@ namespace cpplinq
 		IEnumerable<T> Union(IEnumerable<T> other)
 		{
 			IEnumerable<T> ret;
+			ret.reserve(this->size() + other->size()); // RESERVE
 			std::sort(this->begin(), this->end());
 			std::sort(other.begin(), other.end());
 			std::set_union(this->begin(), this->end(), other.begin(), other.end(), std::back_inserter(ret));
@@ -150,6 +153,7 @@ namespace cpplinq
 		IEnumerable<T>& Distinct()
 		{
 			std::unordered_set<T> vals;
+			vals.reserve(this->size() / 2) // RESERVE
 			std::for_each(this->begin(), this->end(), [&vals](T val) {if (vals.find(val) == vals.end()) { vals.insert(val); }});
 			this->erase(std::copy(vals.begin(), vals.end(), this->begin()), this->end());
 			return *this;
@@ -207,6 +211,7 @@ namespace cpplinq
 		IEnumerable<R> Select(F func)
 		{
 			IEnumerable<R> ret;
+			ret.reserve(this->size()); // RESERVE, UNCHANGABLE
 			std::transform(this->begin(), this->end(), std::back_inserter(ret), func);
 			return ret;
 		}
@@ -216,6 +221,7 @@ namespace cpplinq
 		IEnumerable<R> Select(F func)
 		{
 			IEnumerable<R> ret;
+			ret.reserve(this->size()); // RESERVE, UNCHANGABLE
 			int n = 0;
 			std::transform(this->begin(), this->end(), std::back_inserter(ret), [&n, &func](T val) {return func(val, n++); });
 			return ret;
@@ -244,6 +250,8 @@ namespace cpplinq
 		{
 			IEnumerable<R> ret;
 			IEnumerable<RC> inter;
+			ret.reserve(this->size()); // RESERVING
+			inter.reserve(this->size()); // RESERVING, unavoidable
 			std::transform(this->begin(), this->end(), std::back_inserter(inter), func);
 			std::for_each(inter.begin(), inter.end(), [&ret](RC& rc) {std::copy(rc.begin(), rc.end(), std::back_inserter(ret)); });
 			return ret;
@@ -255,6 +263,8 @@ namespace cpplinq
 		{
 			IEnumerable<R> ret;
 			IEnumerable<RC> inter;
+			ret.reserve(this->size()); // RESERVING
+			inter.reserve(this->size()); // RESERVING, unavoidable
 			int n = 0;
 			std::transform(this->begin(), this->end(), std::back_inserter(inter), [&n, &func](T val) {return func(val, n++); });
 			std::for_each(inter.begin(), inter.end(), [&ret](RC& rc) {std::copy(rc.begin(), rc.end(), std::back_inserter(ret)); });
@@ -267,6 +277,8 @@ namespace cpplinq
 		{
 			IEnumerable<R> ret;
 			unordered_map<T, RC> inter;
+			ret.reserve(this->size()); // RESERVING
+			inter.reserve(this->size()); // RESERVING, unavoidable
 			std::for_each(this->begin(), this->end(), [&inter, &func](T val) {inter[val] = func(val)});
 			std::for_each(inter.begin(), inter.end(), [&ret, &result_selector](std::pair<T, RC>& rc)
 			{
@@ -284,6 +296,8 @@ namespace cpplinq
 		{
 			IEnumerable<R> ret;
 			unordered_map<T, RC> inter;
+			ret.reserve(this->size()); // RESERVING
+			inter.reserve(this->size()); // RESERVING, unavoidable
 			int n = 0;
 			std::for_each(this->begin(), this->end(), [&inter, &func, &n](T val) {inter[val] = func(val, n++); });
 			std::for_each(inter.begin(), inter.end(), [&ret, &result_selector](std::pair<T, RC>& rc)
@@ -347,10 +361,12 @@ namespace cpplinq
 		//		 JOIN OPERATORS
 
 		template <typename FOuterKey, typename FInnerKey, typename FJoin, typename TInner, typename TOuter = T, typename TKey = std::result_of<FOuterKey(TOuter)>::type, typename TJoined = std::result_of<FJoin(TOuter, TInner)>::type, typename _AInnerKey = std::enable_if<std::is_same<std::result_of<FInnerKey(TInner)>::type, TKey>::value>::type>
-		IEnumerable<TJoined> Join(IEnumerable<TInner> innerkeys, FOuterKey outerkeyselector, FInnerKey innerkeyselector, FJoin joiner)
+		IEnumerable<TJoined> Join(const IEnumerable<TInner>& innerkeys, FOuterKey outerkeyselector, FInnerKey innerkeyselector, FJoin joiner)
 		{
 			IEnumerable<TJoined> ret; 
 			std::unordered_map<TKey, TInner> innervals;
+			ret.reserve(this->size()); // RESERVE
+			innervals.reserve(this->size()); // RESERVE
 
 			std::for_each(innerkeys.begin(), innerkeys.end(), [&innervals, &innerkeyselector](TInner innerval) {innervals[innerkeyselector(innerval)] = innerval; });
 			std::for_each(this->begin(), this->end(), [&innervals, &outerkeyselector, &joiner, &ret](TOuter outerval)
@@ -366,10 +382,12 @@ namespace cpplinq
 		}
 
 		template <typename FOuterKey, typename FInnerKey, typename FJoin, typename TInner, typename TOuter = T, typename TKey = std::result_of<FOuterKey(TOuter)>::type, typename TJoined = std::result_of<FJoin(TOuter, IEnumerable<TInner>)>::type, typename _AInnerKey = std::enable_if<std::is_same<std::result_of<FInnerKey(TInner)>::type, TKey>::value>::type>
-		IEnumerable<TJoined> GroupJoin(IEnumerable<TInner> innerkeys, FOuterKey outerkeyselector, FInnerKey innerkeyselector, FJoin joiner)
+		IEnumerable<TJoined> GroupJoin(const IEnumerable<TInner>& innerkeys, FOuterKey outerkeyselector, FInnerKey innerkeyselector, FJoin joiner)
 		{
 			IEnumerable<TJoined> ret;
 			std::unordered_multimap<TKey, TInner> innervals;
+			ret.reserve(this->size()); // RESERVE
+			innervals.reserve(this->size()); // RESERVE
 
 			std::for_each(innerkeys.begin(), innerkeys.end(), [&innervals, &innerkeyselector](TInner innerval) {innervals.insert(std::make_pair(innerkeyselector(innerval), innerval)); });
 			std::for_each(this->begin(), this->end(), [&innervals, &outerkeyselector, &joiner, &ret](TOuter outerval)
@@ -435,7 +453,7 @@ namespace cpplinq
 
 		//		 EQUALITY OPERATORS	
 
-		bool SequenceEqual(IEnumerable<T> other) const
+		bool SequenceEqual(const IEnumerable<T>& other) const
 		{
 			return std::equal(this->begin(), this->end(), other->begin());
 		}
@@ -587,6 +605,7 @@ namespace cpplinq
 		IEnumerable<R> Cast()
 		{
 			IEnumerable<R> ret;
+			ret.reserve(this->size()); // RESERVE
 			std::transform(this->begin(), this->end(), std::back_inserter(ret), [](T val) {return (R)val; });
 			return ret;
 		}
@@ -599,6 +618,7 @@ namespace cpplinq
 		std::vector<T> ToVectorNotConsume() const
 		{
 			std::vector<T> ret;
+			ret.reserve(this->size()); // RESERVE
 			std::for_each(this->begin(), this->end(), [&ret](T val) {ret.push_back(val); });
 			return ret;
 		}
@@ -606,6 +626,7 @@ namespace cpplinq
 		std::list<T> ToList() const
 		{
 			std::list<T> ret;
+			ret.reserve(this->size()); // RESERVE
 			std::for_each(this->begin(), this->end(), [&ret](T val) {ret.push_back(val); });
 			return ret;
 		}
@@ -613,6 +634,7 @@ namespace cpplinq
 		std::forward_list<T> ToForwardList() const
 		{
 			std::forward_list<T> ret;
+			ret.reserve(this->size()); // RESERVE
 			std::for_each(this->begin(), this->end(), [&ret](T val) {ret.push_back(val); });
 			return ret;
 		}
@@ -620,6 +642,7 @@ namespace cpplinq
 		std::set<T> ToSet() const
 		{
 			std::set<T> ret;
+			ret.reserve(this->size()); // RESERVE
 			std::for_each(this->begin(), this->end(), [&ret](T val) {ret.insert(val); });
 			return ret;
 		}
@@ -627,6 +650,7 @@ namespace cpplinq
 		std::unordered_set<T> ToUnorderedSet() const
 		{
 			std::unordered_set<T> ret;
+			ret.reserve(this->size()); // RESERVE
 			std::for_each(this->begin(), this->end(), [&ret](T val) {ret.insert(val); });
 			return ret;
 		}
@@ -635,6 +659,7 @@ namespace cpplinq
 		std::map<K, T> ToMap(F func) const
 		{
 			std::map<K, T> ret;
+			ret.reserve(this->size()); // RESERVE
 			std::for_each(this->begin(), this->end(), [&ret, &func](T val) {ret[func(val)] = val; });
 			return ret;
 		}
@@ -643,13 +668,14 @@ namespace cpplinq
 		std::unordered_map<K, T> ToUnorderedMap(F func) const
 		{
 			std::unordered_map<K, T> ret;
+			ret.reserve(this->size()); // RESERVE
 			std::for_each(this->begin(), this->end(), [&ret, &func](T val) {ret[func(val)] = val; });
 			return ret;
 		}
 
 		//		CONCATENATION OPERATORS
 
-		IEnumerable<T>& Concat(IEnumerable<T>& other)
+		IEnumerable<T>& Concat(const IEnumerable<T>& other)
 		{
 			std::copy(other.begin(), other.end(), std::back_inserter(*this));
 			return *this;
