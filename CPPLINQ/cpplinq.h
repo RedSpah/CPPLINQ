@@ -72,6 +72,8 @@ namespace cpplinq
 			return *this;
 		}
 
+
+
 		template <typename F1, typename K1 = std::result_of<F1(T)>::type>
 		IEnumerable<T>& OrderByDescending(F1 func1)
 		{
@@ -111,6 +113,8 @@ namespace cpplinq
 			});
 			return *this;
 		}
+
+
 
 		IEnumerable<T>& Reverse()
 		{
