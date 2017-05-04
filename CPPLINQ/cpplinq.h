@@ -16,6 +16,7 @@
 
 namespace cpplinq
 {
+
 	template <typename T>
 	struct IEnumerable : private std::vector<T>
 	{
@@ -32,7 +33,7 @@ namespace cpplinq
 
 		
 		template <typename ACont,/* typename _A, typename Cont,*/ typename U>
-		friend IEnumerable<U> LINQ(ACont);
+		friend IEnumerable<U> LINQ_impl(ACont);
 
 		template <typename U>
 		friend IEnumerable<U> LINQ(std::vector<U>&&);
@@ -1145,14 +1146,21 @@ namespace cpplinq
 		static_assert(std::is_same<decltype(*(std::declval<Cont>().begin())), decltype(*(std::declval<Cont>().end()))>::value, "Types of begin() and end() iterators must be the same.");
 		return RefIEnumerable<Cont, Const, T>(cont);
 	}
-	
+
+
+	template <typename ACont, typename T>
+	IEnumerable<T> LINQ_impl(ACont cont)
+	{
+		IEnumerable<T> ret;
+		std::for_each(cont.begin(), cont.end(), [&ret](T val) {ret.push_back(val); });
+		return ret;
+	}
+
 	template <typename ACont, /*typename _A = typename std::enable_if<!std::is_lvalue_reference<ACont>::value>::type, typename Cont = typename std::remove_reference<ACont>::type,*/ typename T = typename std::decay<decltype(*(std::declval<typename std::remove_reference<ACont>::type>().begin()))>::type>
 	IEnumerable<T> LINQ(ACont cont)
 	{
 		static_assert(std::is_same<decltype(*(std::declval<typename std::remove_reference<ACont>::type>().begin())), decltype(*(std::declval<typename std::remove_reference<ACont>::type>().end()))>::value, "Types of begin() and end() iterators must be the same.");
-		IEnumerable<T> ret;
-		std::for_each(cont.begin(), cont.end(), [&ret](T val) {ret.push_back(val); });
-		return ret;
+		return LINQ_impl<ACont, T>(cont);
 	}
 	
 	template <typename T>
