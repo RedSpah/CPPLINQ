@@ -221,7 +221,7 @@ namespace cpplinq
 			return ret;
 		}
 		
-		// ordinary version
+		// ordinary version, R == T
 		template <typename F, typename _A = std::enable_if<std::is_same<std::result_of<F(T)>::type, T>::value>::type, typename = void, typename = void, typename = void>
 		IEnumerable<T>& Select(F func)
 		{
@@ -229,7 +229,7 @@ namespace cpplinq
 			return *this;
 		}
 
-		// func takes a second parameter, which is the zero-based index of the element
+		// func takes a second parameter, which is the zero-based index of the element, R == T
 		template <typename F, typename _A = std::enable_if<std::is_same<std::result_of<F(T, int)>::type, T>::value>::type, typename = void, typename = void, typename = void, typename = void>
 		IEnumerable<T>& Select(F func)
 		{
