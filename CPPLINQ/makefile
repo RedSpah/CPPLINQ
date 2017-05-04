@@ -1,8 +1,4 @@
-CFLAGS = -I.
-DEPS = cpplinq.h
-
-%.o: %.cpp $(DEPS)
-	$(CXX) -c -o $@ $< $(CFLAGS)
+CFLAGS = -std=c++11
 
 cpplinqmake: testing.cpp
-	$(CXX) -o test testing.o -I.
+	$(CXX) -o test testing.cpp -I. $(CFLAGS)
