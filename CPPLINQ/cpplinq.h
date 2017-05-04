@@ -12,6 +12,7 @@
 #include <numeric>
 
 #include <exception>
+#include <stdexcept>
 
 namespace cpplinq
 {
@@ -166,7 +167,7 @@ namespace cpplinq
 		IEnumerable<T>& Distinct()
 		{
 			std::unordered_set<T> vals;
-			vals.reserve(this->size() / 2) // RESERVE
+			vals.reserve(this->size() / 2); // RESERVE
 			std::for_each(this->begin(), this->end(), [&vals](T val) {if (vals.find(val) == vals.end()) { vals.insert(val); }});
 			this->erase(std::copy(vals.begin(), vals.end(), this->begin()), this->end());
 			return *this;
@@ -258,7 +259,7 @@ namespace cpplinq
 		}
 
 		// ordinary version
-		template <typename F, typename RC = typename std::result_of<F(T)>::type, typename R = RC::value_type>
+		template <typename F, typename RC = typename std::result_of<F(T)>::type, typename R = typename RC::value_type>
 		IEnumerable<R> SelectMany(F func)
 		{
 			IEnumerable<R> ret;
@@ -271,7 +272,7 @@ namespace cpplinq
 		}
 
 		// func takes a second parameter, which is the zero-based index of the element
-		template <typename F, typename RC = typename std::result_of<F(T, int)>::type, typename R = RC::value_type, typename = void>
+		template <typename F, typename RC = typename std::result_of<F(T, int)>::type, typename R = typename RC::value_type, typename = void>
 		IEnumerable<R> SelectMany(F func)
 		{
 			IEnumerable<R> ret;
@@ -285,17 +286,17 @@ namespace cpplinq
 		}
 
 		// ordinary version with result selector
-		template <typename F, typename P, typename RC = typename std::result_of<F(T)>::type, typename R = typename std::result_of<P(T, RC::value_type)>::type>
+		template <typename F, typename P, typename RC = typename std::result_of<F(T)>::type, typename R = typename std::result_of<P(T, typename RC::value_type)>::type>
 		IEnumerable<R> SelectMany(F func, P result_selector)
 		{
 			IEnumerable<R> ret;
-			unordered_map<T, RC> inter;
+			std::unordered_map<T, RC> inter;
 			ret.reserve(this->size()); // RESERVING
 			inter.reserve(this->size()); // RESERVING, unavoidable
-			std::for_each(this->begin(), this->end(), [&inter, &func](T val) {inter[val] = func(val)});
+			std::for_each(this->begin(), this->end(), [&inter, &func](T val) {inter[val] = func(val); });
 			std::for_each(inter.begin(), inter.end(), [&ret, &result_selector](std::pair<T, RC>& rc)
 			{
-				std::transform(rc.second.begin(), rc.second.end(), std::back_inserter(ret), [&rc](RC::value_type val) 
+				std::transform(rc.second.begin(), rc.second.end(), std::back_inserter(ret), [&rc, &result_selector](typename RC::value_type val) 
 				{
 					return result_selector(rc.first, val); 
 				}); 
@@ -304,18 +305,18 @@ namespace cpplinq
 		}
 
 		// func takes a second parameter, which is the zero-based index of the element with result selector
-		template <typename F, typename P, typename RC = typename std::result_of<F(T, int)>::type, typename R = typename std::result_of<P(T, RC::value_type)>::type, typename = void>
+		template <typename F, typename P, typename RC = typename std::result_of<F(T, int)>::type, typename R = typename std::result_of<P(T, typename RC::value_type)>::type, typename = void>
 		IEnumerable<R> SelectMany(F func, P result_selector)
 		{
 			IEnumerable<R> ret;
-			unordered_map<T, RC> inter;
+			std::unordered_map<T, RC> inter;
 			ret.reserve(this->size()); // RESERVING
 			inter.reserve(this->size()); // RESERVING, unavoidable
 			int n = 0;
 			std::for_each(this->begin(), this->end(), [&inter, &func, &n](T val) {inter[val] = func(val, n++); });
 			std::for_each(inter.begin(), inter.end(), [&ret, &result_selector](std::pair<T, RC>& rc)
 			{
-				std::transform(rc.second.begin(), rc.second.end(), std::back_inserter(ret), [&rc](RC::value_type val)
+				std::transform(rc.second.begin(), rc.second.end(), std::back_inserter(ret), [&rc, &result_selector](typename RC::value_type val)
 				{
 					return result_selector(rc.first, val);
 				});
@@ -411,7 +412,7 @@ namespace cpplinq
 				{
 					auto range = innervals.equal_range(key);
 					IEnumerable<TInner> block;
-					std::for_each(range.first, range.second, [&block](auto p) {block.push_back(p.second); });
+					std::for_each(range.first, range.second, [&block](std::pair<TKey, TInner> p) {block.push_back(p.second); });
 					ret.push_back(joiner(outerval, block));
 				}
 			});
@@ -445,7 +446,7 @@ namespace cpplinq
 		{
 			IEnumerable<T> ret;		
 
-			for (int i = 0; i < count; i++)
+			for (std::size_t i = 0; i < count; i++)
 			{
 				ret.push_back(init);
 				init += inc;
@@ -457,7 +458,7 @@ namespace cpplinq
 		static IEnumerable<T> Repeat(T val, std::size_t count)
 		{
 			IEnumerable<T> ret;
-			for (int i = 0; i < count; i++)
+			for (std::size_t i = 0; i < count; i++)
 			{
 				ret.push_back(val);
 			}
