@@ -31,7 +31,7 @@ namespace cpplinq
 		/*=== FRIENDS ===*/
 
 		
-		template <typename ACont, typename _A, typename Cont, typename U>
+		template <typename ACont, typename = void, typename Cont, typename U>
 		friend IEnumerable<U> LINQ(ACont);
 
 		template <typename U>
