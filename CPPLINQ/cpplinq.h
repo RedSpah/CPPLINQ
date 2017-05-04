@@ -31,13 +31,13 @@ namespace cpplinq
 
 		/*=== FRIENDS ===*/
 
-		/*
+		
 		template <typename Cont, typename U>
 		friend IEnumerable<U> LINQ(Cont&&);
 
-		template <typename U>
-		friend IEnumerable<U> LINQ(std::vector<U>&&);
-		*/
+	//	template <typename U>
+	//	friend IEnumerable<U> LINQ(std::vector<U>&&);
+		
 
 		/*=== QUERY FUNCTIONS ===*/
 		//		 SORTING
@@ -1152,7 +1152,6 @@ namespace cpplinq
 	{
 		static_assert(std::is_same<decltype(*(std::declval<Cont>().begin())), decltype(*(std::declval<Cont>().end()))>::value, "Types of begin() and end() iterators must be the same.");
 		IEnumerable<T> ret;
-		ret.reserve(cont.end() - cont.begin());
 		std::for_each(cont.begin(), cont.end(), [&ret](T val) {ret.push_back(val); });
 		return ret;
 	}
