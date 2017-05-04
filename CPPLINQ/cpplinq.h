@@ -15,6 +15,7 @@
 
 namespace cpplinq
 {
+
 	template <typename T>
 	struct IEnumerable : private std::vector<T>
 	{
@@ -26,6 +27,14 @@ namespace cpplinq
 		IEnumerable(): std::vector<T>() {};
 
 		IEnumerable(const std::vector<T>& vec): std::vector<T>(vec) {};
+
+		/*=== FRIENDS ===*/
+
+		template <typename Cont, typename U>
+		friend IEnumerable<U> LINQ(Cont&&);
+
+		template <typename U>
+		friend IEnumerable<U> LINQ(std::vector<U>&&);
 
 		/*=== QUERY FUNCTIONS ===*/
 		//		 SORTING
@@ -789,10 +798,21 @@ namespace cpplinq
 		}
 	};
 
-	template <typename Cont, bool Const = std::is_const<Cont>::value, typename T = std::decay<decltype(*(std::declval<Cont>().begin()))>::type>
+	//template <typename Cont, bool Const = std::is_const<Cont>::value, typename T = std::decay<decltype(*(std::declval<Cont>().begin()))>::type>
+	template <typename Cont, bool Const, typename T>
 	struct RefIEnumerable
 	{
+	private:
 		RefIEnumerable(Cont& cont) : ref(cont) {};
+		RefIEnumerable() = delete;		
+	//	RefIEnumerable(const RefIEnumerable<Cont, Const, T>& other) = delete;
+	//	RefIEnumerable(RefIEnumerable<Cont, Const, T>&& other) = delete;
+	//	RefIEnumerable<Cont, Const, T>& operator=(const RefIEnumerable<Cont, Const, T>& other) = delete;
+	//	RefIEnumerable<Cont, Const, T>& operator=(RefIEnumerable<Cont, Const, T>&& other) = delete;
+	public:
+
+		template <typename C, bool B, typename U>
+		friend RefIEnumerable<C, B, U> LINQ(C&);
 
 		template <typename F, typename _A = std::enable_if<std::is_same<std::result_of<F(T, T)>::type, T>::value>::type>
 		T Aggregate(F func) const
@@ -1101,7 +1121,7 @@ namespace cpplinq
 			return std::find(ref.begin(), ref.end(), val) != ref.end();
 		}
 
-		IEnumerable<T> Copy()
+		typename IEnumerable<T> Copy()
 		{
 			return IEnumerable<T>(ref.begin(), ref.end());
 		}
@@ -1116,23 +1136,27 @@ namespace cpplinq
 		Cont& ref;
 	};
 
-	template <typename Cont, typename _A1 = decltype(*(std::declval<Cont>().begin())), typename _A2 = decltype(*(std::declval<Cont>().end())), typename _A3 = std::enable_if<std::is_same<_A1, _A2>::value>::type>
-	RefIEnumerable<Cont> LINQ(Cont& cont)
+	//typename ArgCont, typename IsRef = std::enable_if<std::is_lvalue_reference<ArgCount>::value>::type, typename Cont = std::decay<ArgCont>::type
+	template <typename Cont, bool Const = std::is_const<Cont>::value, typename T = std::decay<decltype(*(std::declval<Cont>().begin()))>::type>
+	RefIEnumerable<Cont, Const, T> LINQ(Cont& cont)
 	{
-		return RefIEnumerable<Cont>(cont);
+		static_assert(std::is_same<decltype(*(std::declval<Cont>().begin())), decltype(*(std::declval<Cont>().end()))>::value, "Types of begin() and end() iterators must be the same.");
+		return RefIEnumerable<Cont, Const, T>(cont);
 	}
-
-	template <typename Cont, typename _A1 = decltype(*(std::declval<Cont>().begin())), typename _A2 = decltype(*(std::declval<Cont>().end())), typename _A3 = std::enable_if<std::is_same<_A1, _A2>::value>::type, typename T = std::decay<_A1>::type>
+	
+	template <typename Cont, typename T = std::decay<decltype(*(std::declval<Cont>().begin()))>::type>
 	IEnumerable<T> LINQ(Cont&& cont)
 	{
+		static_assert(std::is_same<decltype(*(std::declval<Cont>().begin())), decltype(*(std::declval<Cont>().end()))>::value, "Types of begin() and end() iterators must be the same.");
 		IEnumerable<T> ret;
-		std::for_each(cont.begin(), cont.end(), [](T val) {ret.push_back(val); });
+		std::for_each(cont.begin(), cont.end(), [&ret](T val) {ret.push_back(val); });
 		return ret;
 	}
-
+	
 	template <typename T>
 	IEnumerable<T> LINQ(std::vector<T>&& cont)
 	{
-		return IEnumerable<T>(std::forward(cont));
+		return IEnumerable<T>(std::forward<std::vector<T>&&>(cont));
 	}
+	
 }

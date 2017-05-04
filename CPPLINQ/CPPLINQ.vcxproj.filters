@@ -23,10 +23,13 @@
     <None Include=".travis.yml">
       <Filter>Resource Files</Filter>
     </None>
+    <None Include="makefile">
+      <Filter>Resource Files</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="makefile">
-      <Filter>Resource Files</Filter>
+    <ClCompile Include="testing.cpp">
+      <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>
