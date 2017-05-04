@@ -1,4 +1,7 @@
-CFLAGS = -std=c++1y -Wall -Wextra -ferror-limit=64
 
 cpplinqmake: testing.cpp
-	$(CXX) -o test testing.cpp -I. $(CFLAGS)
+ifeq($(CXX),g++)
+	$(CXX) -o test testing.cpp -I. -Wall -Wextra -std=c++0x -fmax-errors=64
+else
+	$(CXX) -o test testing.cpp -I. -Wall -Wextra -std=c++11 -ferror-limit=64
+endif

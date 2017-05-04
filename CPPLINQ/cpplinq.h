@@ -35,8 +35,8 @@ namespace cpplinq
 		template <typename Cont, typename U>
 		friend IEnumerable<U> LINQ(Cont&&);
 
-	//	template <typename U>
-	//	friend IEnumerable<U> LINQ(std::vector<U>&&);
+		template <typename U>
+		friend IEnumerable<U> LINQ(std::vector<U>&&);
 		
 
 		/*=== QUERY FUNCTIONS ===*/
