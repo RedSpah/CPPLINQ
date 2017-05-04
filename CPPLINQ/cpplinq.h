@@ -10,7 +10,7 @@
 #include <functional>
 #include <algorithm>
 #include <numeric>
-
+#include <type_traits>
 #include <exception>
 #include <stdexcept>
 
