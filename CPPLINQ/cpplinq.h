@@ -31,11 +31,13 @@ namespace cpplinq
 
 		/*=== FRIENDS ===*/
 
+		/*
 		template <typename Cont, typename U>
 		friend IEnumerable<U> LINQ(Cont&&);
 
 		template <typename U>
 		friend IEnumerable<U> LINQ(std::vector<U>&&);
+		*/
 
 		/*=== QUERY FUNCTIONS ===*/
 		//		 SORTING
@@ -731,7 +733,7 @@ namespace cpplinq
 			if (this->size() == 0) { throw std::logic_error("IEnumerable<T>::Average() | IEnumerable<T> is empty."); }
 
 			T val = T(0);
-			std::for_each(this->begin(), this->end(), [&val, &func](T v) {val += v; });
+			std::for_each(this->begin(), this->end(), [&val](T v) {val += v; });
 			return val / this->size();
 		}
 
@@ -760,7 +762,7 @@ namespace cpplinq
 		{
 			T val;
 			bool first = false;
-			std::for_each(this->begin(), this->end(), [&val, &first, &func](T v) {if (!first) { first = true; val = v; } else { val = std::max(val, v); }});
+			std::for_each(this->begin(), this->end(), [&val, &first](T v) {if (!first) { first = true; val = v; } else { val = std::max(val, v); }});
 			return val;
 		}
 
@@ -778,7 +780,7 @@ namespace cpplinq
 		{
 			T val;
 			bool first = false;
-			std::for_each(this->begin(), this->end(), [&val, &first, &func](T v) {if (!first) { first = true; val = v; } else { val = std::min(val, v); }});
+			std::for_each(this->begin(), this->end(), [&val, &first](T v) {if (!first) { first = true; val = v; } else { val = std::min(val, v); }});
 			return val;
 		}
 
@@ -794,7 +796,7 @@ namespace cpplinq
 		T Sum() const
 		{
 			T val = T(0);
-			std::for_each(this->begin(), this->end(), [&val, &func](T v) {val += v; });
+			std::for_each(this->begin(), this->end(), [&val](T v) {val += v; });
 			return val;
 		}
 	};
@@ -845,7 +847,7 @@ namespace cpplinq
 		T Average() const
 		{
 			T val = T(0);
-			std::for_each(ref.begin(), ref.end(), [&val, &func](T v) {val += v; });
+			std::for_each(ref.begin(), ref.end(), [&val](T v) {val += v; });
 			return val / this->Count();
 		}
 
@@ -874,7 +876,7 @@ namespace cpplinq
 		{
 			T val;
 			bool first = false;
-			std::for_each(ref.begin(), ref.end(), [&val, &first, &func](T v) {if (!first) { first = true; val = v; } else { val = std::max(val, v); }});
+			std::for_each(ref.begin(), ref.end(), [&val, &first](T v) {if (!first) { first = true; val = v; } else { val = std::max(val, v); }});
 			return val;
 		}
 
@@ -892,7 +894,7 @@ namespace cpplinq
 		{
 			T val;
 			bool first = false;
-			std::for_each(ref.begin(), ref.end(), [&val, &first, &func](T v) {if (!first) { first = true; val = v; } else { val = std::min(val, v); }});
+			std::for_each(ref.begin(), ref.end(), [&val, &first](T v) {if (!first) { first = true; val = v; } else { val = std::min(val, v); }});
 			return val;
 		}
 
@@ -908,7 +910,7 @@ namespace cpplinq
 		T Sum() const
 		{
 			T val = T(0);
-			std::for_each(ref.begin(), ref.end(), [&val, &func](T v) {val += v; });
+			std::for_each(ref.begin(), ref.end(), [&val](T v) {val += v; });
 			return val;
 		}
 
@@ -947,7 +949,7 @@ namespace cpplinq
 			return ret;
 		}
 
-		template <typename F, typename K = std::result_of<F(T)>::type>
+		template <typename F, typename K = typename std::result_of<F(T)>::type>
 		std::map<K, T> ToMap(F func) const
 		{
 			std::map<K, T> ret;
@@ -955,7 +957,7 @@ namespace cpplinq
 			return ret;
 		}
 
-		template <typename F, typename K = std::result_of<F(T)>::type>
+		template <typename F, typename K = typename std::result_of<F(T)>::type>
 		std::unordered_map<K, T> ToUnorderedMap(F func) const
 		{
 			std::unordered_map<K, T> ret;
@@ -981,7 +983,7 @@ namespace cpplinq
 			else throw std::length_error("RefIEnumberable<T>::First() | The collection referred to by the RefIEnumerable<T> is empty.");
 		}
 
-		template <typename F, typename _A = std::enable_if<std::is_same<typename std::result_of<F(T)>::type, bool>::value>::type>
+		template <typename F, typename _A = typename std::enable_if<std::is_same<typename std::result_of<F(T)>::type, bool>::value>::type>
 		T First(F func) const
 		{
 			auto v = std::find_if(ref.begin(), ref.end(), func);
@@ -998,7 +1000,7 @@ namespace cpplinq
 			else return T();
 		}
 
-		template <typename F, typename _A = std::enable_if<std::is_same<typename std::result_of<F(T)>::type, bool>::value>::type>
+		template <typename F, typename _A = typename std::enable_if<std::is_same<typename std::result_of<F(T)>::type, bool>::value>::type>
 		T FirstOrDefault(F func) const
 		{
 			auto v = std::find_if(ref.begin(), ref.end(), func);
@@ -1122,7 +1124,7 @@ namespace cpplinq
 			return std::find(ref.begin(), ref.end(), val) != ref.end();
 		}
 
-		typename IEnumerable<T> Copy()
+		IEnumerable<T> Copy()
 		{
 			return IEnumerable<T>(ref.begin(), ref.end());
 		}
@@ -1150,6 +1152,7 @@ namespace cpplinq
 	{
 		static_assert(std::is_same<decltype(*(std::declval<Cont>().begin())), decltype(*(std::declval<Cont>().end()))>::value, "Types of begin() and end() iterators must be the same.");
 		IEnumerable<T> ret;
+		ret.reserve(cont.end() - cont.begin());
 		std::for_each(cont.begin(), cont.end(), [&ret](T val) {ret.push_back(val); });
 		return ret;
 	}
