@@ -31,7 +31,7 @@ namespace cpplinq
 		/*=== FRIENDS ===*/
 
 		
-		template <typename ACont,/* typename _A,*/ typename Cont, typename U>
+		template <typename ACont,/* typename _A, typename Cont,*/ typename U>
 		friend IEnumerable<U> LINQ(ACont);
 
 		template <typename U>
@@ -1146,7 +1146,7 @@ namespace cpplinq
 		return RefIEnumerable<Cont, Const, T>(cont);
 	}
 	
-	template <typename ACont, /*typename _A = typename std::enable_if<!std::is_lvalue_reference<ACont>::value>::type,*/ typename Cont = typename std::remove_reference<ACont>::type, typename T = typename std::decay<decltype(*(std::declval<Cont>().begin()))>::type>
+	template <typename ACont, /*typename _A = typename std::enable_if<!std::is_lvalue_reference<ACont>::value>::type, typename Cont = typename std::remove_reference<ACont>::type,*/ typename T = typename std::decay<decltype(*(std::declval<typename std::remove_reference<ACont>::type>().begin()))>::type>
 	IEnumerable<T> LINQ(ACont cont)
 	{
 		static_assert(std::is_same<decltype(*(std::declval<Cont>().begin())), decltype(*(std::declval<Cont>().end()))>::value, "Types of begin() and end() iterators must be the same.");
