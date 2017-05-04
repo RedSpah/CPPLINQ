@@ -51,10 +51,10 @@ namespace cpplinq
 			return *this;
 		}
 
-		template <typename F1, typename K1 = typename std::result_of<F1(T)>::type, typename F2, typename K2 = typename std::result_of<F2(T)>::type>
+		template <typename F1, typename F2, typename K1 = typename std::result_of<F1(T)>::type, typename K2 = typename std::result_of<F2(T)>::type>
 		IEnumerable<T>& OrderBy(F1 func1, F2 func2)
 		{
-			std::sort(this->begin(), this->end(), [&func1, &func2](T val1, T val2)
+			std::sort(this->begin(), this->end(), [&func1, &func2](T val1, T val2) -> bool
 			{
 				K1 k1v1 = func1(val1), k1v2 = func1(val2);
 				K2 k2v1 = func2(val1), k2v2 = func2(val2);
@@ -66,10 +66,10 @@ namespace cpplinq
 			return *this;
 		}
 
-		template <typename F1, typename K1 = typename std::result_of<F1(T)>::type, typename F2, typename K2 = typename std::result_of<F2(T)>::type, typename F3, typename K3 = typename std::result_of<F3(T)>::type>
+		template <typename F1, typename F2, typename F3, typename K1 = typename std::result_of<F1(T)>::type, typename K2 = typename std::result_of<F2(T)>::type, typename K3 = typename std::result_of<F3(T)>::type>
 		IEnumerable<T>& OrderBy(F1 func1, F2 func2, F3 func3)
 		{
-			std::sort(this->begin(), this->end(), [&func1, &func2, &func3](T val1, T val2)
+			std::sort(this->begin(), this->end(), [&func1, &func2, &func3](T val1, T val2) -> bool
 			{
 				K1 k1v1 = func1(val1), k1v2 = func1(val2);
 				K2 k2v1 = func2(val1), k2v2 = func2(val2);
@@ -93,10 +93,10 @@ namespace cpplinq
 			return *this;
 		}
 
-		template <typename F1, typename K1 = typename std::result_of<F1(T)>::type, typename F2, typename K2 = typename std::result_of<F2(T)>::type>
+		template <typename F1, typename F2, typename K1 = typename std::result_of<F1(T)>::type, typename K2 = typename std::result_of<F2(T)>::type>
 		IEnumerable<T>& OrderByDescending(F1 func1, F2 func2)
 		{
-			std::sort(this->begin(), this->end(), [&func1, &func2](T val1, T val2)
+			std::sort(this->begin(), this->end(), [&func1, &func2](T val1, T val2) -> bool
 			{
 				K1 k1v1 = func1(val1), k1v2 = func1(val2);
 				K2 k2v1 = func2(val1), k2v2 = func2(val2);
@@ -108,10 +108,10 @@ namespace cpplinq
 			return *this;
 		}
 
-		template <typename F1, typename K1 = typename std::result_of<F1(T)>::type, typename F2, typename K2 = typename std::result_of<F2(T)>::type, typename F3, typename K3 = typename std::result_of<F3(T)>::type>
+		template <typename F1, typename F2, typename F3, typename K1 = typename std::result_of<F1(T)>::type, typename K2 = typename std::result_of<F2(T)>::type, typename K3 = typename std::result_of<F3(T)>::type>
 		IEnumerable<T>& OrderByDescending(F1 func1, F2 func2, F3 func3)
 		{
-			std::sort(this->begin(), this->end(), [&func1, &func2, &func3](T val1, T val2)
+			std::sort(this->begin(), this->end(), [&func1, &func2, &func3](T val1, T val2) -> bool
 			{
 				K1 k1v1 = func1(val1), k1v2 = func1(val2);
 				K2 k2v1 = func2(val1), k2v2 = func2(val2);
