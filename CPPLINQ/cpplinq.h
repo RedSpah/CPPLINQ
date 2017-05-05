@@ -800,12 +800,8 @@ namespace cpplinq
 	template <typename Cont, bool Const, typename T>
 	struct RefIEnumerable
 	{
-	private:
 		RefIEnumerable(Cont& cont) : ref(cont) {};
-		RefIEnumerable() = delete;		
-
-	public:
-
+		RefIEnumerable() = delete;
 
 		template <typename F, typename _A = typename std::enable_if<std::is_same<typename std::result_of<F(T, T)>::type, T>::value>::type>
 		T Aggregate(F func) const
@@ -1119,11 +1115,17 @@ namespace cpplinq
 			return IEnumerable<T>(ref.begin(), ref.end());
 		}
 
+	/*	template <typename _A1 = std::enable_if<std::is_same<Cont, std::vector<T>>::value>::type, typename _A2 = std::enable_if<!Const>::type>
+		IEnumerable<T> Consume()
+		{
+			return IEnumerable<T>(std::move(ref));
+		} */
+
 	private:
 		Cont& ref;
 	};
 
-	//typename ArgCont, typename IsRef = std::enable_if<std::is_lvalue_reference<ArgCount>::value>::type, typename Cont = std::decay<ArgCont>::type   
+	//typename ArgCont, typename IsRef = std::enable_if<std::is_lvalue_reference<ArgCount>::value>::type, typename Cont = std::decay<ArgCont>::type
 	template <typename Cont, bool Const = std::is_const<Cont>::value, typename T = typename std::decay<decltype(*(std::declval<Cont>().begin()))>::type>
 	RefIEnumerable<Cont, Const, T> LINQ(Cont& cont)
 	{
@@ -1140,6 +1142,7 @@ namespace cpplinq
 		std::for_each(cont.begin(), cont.end(), [&ret](T val) {ret.push_back(val); });
 		return ret;
 	}
+
 
 	
 	template <typename T>
