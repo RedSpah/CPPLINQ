@@ -3,16 +3,6 @@ sudo: false
 
 addons:
   apt:
-    sources:
-      - ubuntu-toolchain-r-test
-      - llvm-toolchain-precise-3.3
-      - llvm-toolchain-precise-3.4
-      - llvm-toolchain-precise-3.5
-      - llvm-toolchain-precise-3.6
-      - llvm-toolchain-precise-3.7
-      - llvm-toolchain-precise-3.8
-      - llvm-toolchain-precise-3.9
-      - llvm-toolchain-precise-4.0
     packages:
       - g++-4.4
       - g++-4.5
@@ -30,6 +20,16 @@ addons:
       - clang-3.8
       - clang-3.9
       - clang-4.0
+    sources:
+      - ubuntu-toolchain-r-test
+      - llvm-toolchain-precise-3.3
+      - llvm-toolchain-precise-3.4
+      - llvm-toolchain-precise-3.5
+      - llvm-toolchain-precise-3.6
+      - llvm-toolchain-precise-3.7
+      - llvm-toolchain-precise-3.8
+      - llvm-toolchain-precise-3.9
+      - llvm-toolchain-precise-4.0
    
 
 matrix:
