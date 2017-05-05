@@ -1,8 +1,171 @@
 language: cpp
-compiler:
-- clang
-- gcc
+matrix:
+  include:
+    - os: linux
+      compiler: gcc
+      addons:
+        apt:
+          sources: ['ubuntu-toolchain-r-test']
+          packages: ['g++-4.4']
+      env: 
+	    - COMPILER=g++-4.4
+		- C11FLAG=-std=c++0x
 
+    - os: linux
+      compiler: gcc
+      addons:
+        apt:
+          sources: ['ubuntu-toolchain-r-test']
+          packages: ['g++-4.5']
+      env: 
+	    - COMPILER=g++-4.5
+		- C11FLAG=-std=c++0x
+
+    - os: linux
+      compiler: gcc
+      addons:
+        apt:
+          sources: ['ubuntu-toolchain-r-test']
+          packages: ['g++-4.6']
+      env: 
+	    - COMPILER=g++-4.6
+		- C11FLAG=-std=c++0x
+  
+    - os: linux
+      compiler: gcc
+      addons:
+        apt:
+          sources: ['ubuntu-toolchain-r-test']
+          packages: ['g++-4.7']
+      env: 
+	    - COMPILER=g++-4.7
+		- C11FLAG=-std=c++11
+ 
+	- os: linux
+      compiler: gcc
+      addons:
+        apt:
+          sources: ['ubuntu-toolchain-r-test']
+          packages: ['g++-4.8']
+      env: 
+	    - COMPILER=g++-4.8
+		- C11FLAG=-std=c++11
+
+    - os: linux
+      compiler: gcc
+      addons:
+        apt:
+          sources: ['ubuntu-toolchain-r-test']
+          packages: ['g++-4.9']
+      env: 
+	    - COMPILER=g++-4.9
+		- C11FLAG=-std=c++11
+
+    - os: linux
+      compiler: gcc
+      addons:
+        apt:
+          sources: ['ubuntu-toolchain-r-test']
+          packages: ['g++-5']
+      env: 
+	    - COMPILER=g++-5
+		- C11FLAG=-std=c++11
+
+    - os: linux
+      compiler: gcc
+      addons:
+        apt:
+          sources: ['ubuntu-toolchain-r-test']
+          packages: ['g++-6']
+      env: 
+	    - COMPILER=g++-6
+		- C11FLAG=-std=c++11
+
+    - os: linux
+      compiler: clang
+      addons:
+        apt:
+          sources: ['ubuntu-toolchain-r-test', 'llvm-toolchain-precise-3.5']
+          packages: ['clang-3.3']
+      env: 
+	    - COMPILER=clang++-3.3
+		- C11FLAG=-std=c++11
+
+    - os: linux
+      compiler: clang
+      addons:
+        apt:
+          sources: ['ubuntu-toolchain-r-test', 'llvm-toolchain-precise-3.5']
+          packages: ['clang-3.4']
+      env: 
+	    - COMPILER=clang++-3.4
+		- C11FLAG=-std=c++11
+
+    - os: linux
+      compiler: clang
+      addons:
+        apt:
+          sources: ['ubuntu-toolchain-r-test', 'llvm-toolchain-precise-3.5']
+          packages: ['clang-3.5']
+      env: 
+	    - COMPILER=clang++-3.5
+		- C11FLAG=-std=c++11
+
+    - os: linux
+      compiler: clang
+      addons:
+        apt:
+          sources: ['ubuntu-toolchain-r-test', 'llvm-toolchain-precise-3.6']
+          packages: ['clang-3.6']
+      env: 
+	    - COMPILER=clang++-3.6
+		- C11FLAG=-std=c++11
+
+    - os: linux
+      compiler: clang
+      addons:
+        apt:
+          sources: ['ubuntu-toolchain-r-test', 'llvm-toolchain-precise-3.7']
+          packages: ['clang-3.7']
+      env: 
+	    - COMPILER=clang++-3.7
+		- C11FLAG=-std=c++11
+
+    - os: linux
+      compiler: clang
+      addons:
+        apt:
+          sources: ['ubuntu-toolchain-r-test', 'llvm-toolchain-precise-3.5']
+          packages: ['clang-3.8']
+      env: 
+	    - COMPILER=clang++-3.8
+		- C11FLAG=-std=c++11
+
+    - os: linux
+      compiler: clang
+      addons:
+        apt:
+          sources: ['ubuntu-toolchain-r-test', 'llvm-toolchain-precise-3.5']
+          packages: ['clang-3.9']
+      env: 
+	    - COMPILER=clang++-3.9
+		- C11FLAG=-std=c++11
+
+	- os: linux
+      compiler: clang
+      addons:
+        apt:
+          sources: ['ubuntu-toolchain-r-test', 'llvm-toolchain-precise-3.5']
+          packages: ['clang-4.0']
+      env: 
+	    - COMPILER=clang++-4.0
+		- C11FLAG=-std=c++11
+
+    - os: osx
+      compiler: clang
+      env: 
+	    - COMPILER=clang++
+		- C11FLAG=-std=c++11
 script:
 - cd ./CPPLINQ
-- make
+- make CXX=$COMPILER 
