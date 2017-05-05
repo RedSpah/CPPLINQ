@@ -1134,7 +1134,7 @@ namespace cpplinq
 	}
 
 
-	template <typename Cont, typename T = typename std::decay<decltype(*(std::declval<Cont>().begin()))>::type>
+	template <typename Cont, typename T = typename std::decay<decltype(*(std::declval<Cont>().begin()))>::type, typename _A = typename std::enable_if<!std::is_lvalue_reference<Cont>>::type>
 	IEnumerable<T> LINQ(Cont&& cont)
 	{
 		static_assert(std::is_same<decltype(*(std::declval<Cont>().begin())), decltype(*(std::declval<Cont>().end()))>::value, "Types of begin() and end() iterators must be the same.");
