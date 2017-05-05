@@ -1125,7 +1125,7 @@ namespace cpplinq
 		Cont& ref;
 	};
 
-	//typename ArgCont, typename IsRef = std::enable_if<std::is_lvalue_reference<ArgCount>::value>::type, typename Cont = std::decay<ArgCont>::type
+	//typename ArgCont, typename IsRef = std::enable_if<std::is_lvalue_reference<ArgCount>::value>::type, typename Cont = std::decay<ArgCont>::type 
 	template <typename Cont, bool Const = std::is_const<Cont>::value, typename T = typename std::decay<decltype(*(std::declval<Cont>().begin()))>::type>
 	RefIEnumerable<Cont, Const, T> LINQ(Cont& cont)
 	{
