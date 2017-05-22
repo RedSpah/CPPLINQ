@@ -1,7 +1,8 @@
 language: cpp
 sudo: false
 
-language: cpp
+
+
 matrix:
   include:
     - os: linux
@@ -75,3 +76,8 @@ matrix:
 script:
 - cd ./CPPLINQ
 - make CXX=$COMPILER 
+- ./test
+- gcov testing.cpp
+
+after_success:
+- bash <(curl -s https://codecov.io/bash)

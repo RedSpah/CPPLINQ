@@ -11,44 +11,215 @@
 #include <algorithm>
 #include <numeric>
 #include <type_traits>
+
 #include <exception>
 #include <stdexcept>
 
 namespace cpplinq
 {
+	template <typename, bool, typename, bool>
+	struct IEnumerable;
 
-	template <typename T>
+	struct std_hash {};
+
+	enum class alloc_mode : unsigned char {no_alloc, auto_alloc};
+
+	namespace mem
+	{ 
+		struct no_alloc {};
+		struct auto_alloc {};
+	}
+
+	namespace res
+	{
+		template <std::size_t thousands>
+		struct res_var { static constexpr float res = ((float)thousands / 1000); };
+
+		using none = res_var<0>;	
+		using half = res_var<500>;
+		using full = res_var<1000>;
+		using two = res_var<2000>;
+		using three = res_var<3000>;
+		using five = res_var<5000>;
+		using ten = res_var<10000>;
+	}
+
+	namespace templ
+	{
+		struct none 
+		{
+			template <typename T>
+			operator T() { return T(); }
+		};
+
+		struct any_type {};
+
+		template<class ...> using void_t = void;
+
+		template <class = void, class = void>
+		struct is_sortable : std::false_type {};
+
+		template <class T>
+		struct is_sortable<T, void_t<typename std::enable_if<std::is_convertible<decltype(std::declval<T>() < std::declval<T>()), bool>::value>::type, typename std::enable_if<std::is_convertible<decltype(std::declval<T>() > std::declval<T>()), bool>::value>::type>> : std::true_type {};
+	
+		template <class T>
+		constexpr bool is_sortable_v = is_sortable<T>::value;
+
+		template <class = void, class = void>
+		struct is_comparable : std::false_type {};
+
+		template <class T>
+		struct is_comparable<T, void_t<typename std::enable_if<std::is_convertible<decltype(std::declval<T>() == std::declval<T>()), bool>::value>::type, typename std::enable_if<std::is_convertible<decltype(std::declval<T>() != std::declval<T>()), bool>::value>::type>> : std::true_type {};
+
+		template <class T>
+		constexpr bool is_comparable_v = is_comparable<T>::value;
+
+		template <class = void, class = void>
+		struct is_container : std::false_type {};
+
+		template <typename T>
+		struct is_container<T, void_t<decltype(std::declval<T>().begin()), decltype(std::declval<T>().end())>> : std::true_type {};
+
+		template <class T>
+		constexpr bool is_container_v = is_container<T>::value;
+
+		template <typename T>
+		using value_type_t = typename std::decay<decltype(*(std::declval<T>().begin()))>::type;
+
+		template <typename F>
+		using ret_type = typename std::result_of<F>::type;
+
+		template <typename T>
+		using dummy_iterator_t = typename std::vector<T>::iterator;
+
+		//http://stackoverflow.com/questions/24233516/checking-correctness-of-function-call-expression
+		template<typename F, typename... Args>
+		struct is_valid_call {
+		private:
+			template<typename FF, typename... AA>
+			static constexpr auto check(int) ->
+				decltype(std::declval<FF>()(std::declval<AA>()...), std::true_type());
+
+			template<typename FF, typename... AA>
+			static constexpr std::false_type check(...);
+		public:
+			static constexpr bool value = decltype(check<F, Args...>(0)){};
+		};
+
+		template <typename F, typename... A>
+		constexpr bool is_defined_v = is_valid_call<F, A...>::value;
+
+		template <typename = void, bool = false, typename...>
+		struct sanitizer_impl {using type = void; };
+
+		template <typename F, typename... A>
+		struct sanitizer_impl<F, true, A...> { using type = typename std::result_of<F(A...)>::type; };
+
+		// produces an intellisense error in visual studio, but compiles correctly
+		template <typename F, typename... A>
+		using sanitizer_t = typename sanitizer_impl<F, is_defined_v<F, A...>, A...>::type;
+
+		template <typename = void, typename = void, bool = false, typename...>
+		struct is_func_impl : std::false_type {};
+
+		template <typename F, typename  R, typename... A>
+		struct is_func_impl<F, R, true, A...> : std::integral_constant<bool, std::is_same<std::result_of_t<F(A...)>, R>::value> {};
+
+		template <typename F, typename R, typename... A>
+		constexpr auto is_func_v = is_func_impl<F, R, is_defined_v<F, A...>, A...>::value;
+
+		template <typename F, typename A>
+		constexpr bool is_counter_func_v = is_defined_v<F, A, std::size_t>;
+
+		template <typename F, typename A>
+		constexpr bool is_filter_v = is_func_v<F, bool, A> || is_func_v<F, bool, A, std::size_t>;
+
+		template <typename F, typename A>
+		using safe_result_of_t = typename std::conditional<is_counter_func_v<F, A>, typename sanitizer_t<F, A, int>, typename sanitizer_t<F, A>>::type;
+
+		constexpr bool lol = false;
+
+
+
+		template <bool B>
+		struct pt_lambda
+		{
+			template <typename F, typename T, typename R = typename std::result_of<F(T)>::type>
+			static inline R ret(F& func, T& val, int n) { return func(val); }
+		};
+
+		template <>
+		struct pt_lambda<true>
+		{
+			template <typename F, typename T, typename R = typename std::result_of<F(T, int)>::type>
+			static inline R ret(F& func, T& val, int n) { return func(val, n); }
+		};
+	}
+
+
+	template <typename T, bool IsRef = false, typename Cont = std::vector<T>, bool IsContConst = false>
 	struct IEnumerable : public std::vector<T>
 	{
+	private:
+		using VectorIterType = decltype(std::declval<std::vector<T>>().begin());
+		using ContIterType = decltype(std::declval<Cont>().begin());
+		Cont& refcont__;
+
+	public:
+		template <typename RetIter = typename std::conditional<IsRef, ContIterType, VectorIterType>::type>
+		inline RetIter begin() 
+		{
+			if (IsRef) { return refcont__.begin(); }
+			else return std::vector<T>::begin();
+		}
+
+		template <typename RetIter = typename std::conditional<IsRef, ContIterType, VectorIterType>::type>
+		inline RetIter end() 
+		{
+			if (IsRef) { return refcont__.end(); }
+			else return std::vector<T>::end();
+		}
+
+		inline std::size_t size()
+		{
+			if (IsRef) { return std::distance(begin(), end()); }
+			else return std::vector<T>::size();
+		}
+
+
 		template <typename Iter>
-		IEnumerable(Iter begin, Iter end): std::vector<T>(begin, end) {};
+		IEnumerable(Iter begin, Iter end) : std::vector<T>(begin, end), refcont__(*this) {};
 
-		IEnumerable(std::vector<T>&& m): std::vector<T>(std::move(m)) {};
+		IEnumerable(std::vector<T>&& m) : std::vector<T>(std::move(m)), refcont__(*this) {};
 
-		IEnumerable(): std::vector<T>() {};
+		IEnumerable() : std::vector<T>(), refcont__(*this) {};
 
-		IEnumerable(const std::vector<T>& vec): std::vector<T>(vec) {};
+		IEnumerable(const std::vector<T>& vec) : std::vector<T>(vec), refcont__(*this) {};
 
-		/*=== FRIENDS ===*/
-
-
-
+		IEnumerable(Cont& c) : refcont__(c) {};
 
 		/*=== QUERY FUNCTIONS ===*/
 		//		 SORTING
 
 		// Because of complexity of implementing all the boilerplate required to implement 'ThenBy' faithfully, I opted for overloading 'OrderBy' and 'OrderByDesending' to allow for multiple V->K functions, which work just like applying ThenBy to the 'normal' OrderBy 
 
-		template <typename F1, typename K1 = typename std::result_of<F1(T)>::type>
-		IEnumerable<T>& OrderBy(F1 func1)
+		template <typename F1, typename K1 = typename templ::ret_type<F(T)>>
+		IEnumerable<T, IsRef, Cont>& OrderBy(F1 func1)
 		{
-			std::sort(this->begin(), this->end(), [&func1](T val1, T val2) {return func1(val1) < func1(val2); });
+			static_assert(templ::is_sortable<K1>::value, "Values of the return type of the passed functor must define greater-than and less-than operators.");
+			static_assert(!IsContConst, "Cannot call OrderBy() on an IEnumerable created from a const referenced container, a Copy() is required first.");
+
+			std::sort(begin(), end(), [&func1](T val1, T val2) {return func1(val1) < func1(val2); });
 			return *this;
 		}
 
 		template <typename F1, typename F2, typename K1 = typename std::result_of<F1(T)>::type, typename K2 = typename std::result_of<F2(T)>::type>
-		IEnumerable<T>& OrderBy(F1 func1, F2 func2)
+		IEnumerable<T, IsRef, Cont>& OrderBy(F1 func1, F2 func2)
 		{
+			static_assert(templ::is_sortable<K1>::value, "Values of the return type of the first passed functor must define greater-than and less-than operators.");
+			static_assert(templ::is_sortable<K2>::value, "Values of the return type of the second passed functor must define greater-than and less-than operators.");
+			static_assert(!IsContConst, "Cannot call OrderBy() on an IEnumerable created from a const referenced container, a Copy() is required first.");
+
 			std::sort(this->begin(), this->end(), [&func1, &func2](T val1, T val2) -> bool
 			{
 				K1 k1v1 = func1(val1), k1v2 = func1(val2);
@@ -62,8 +233,13 @@ namespace cpplinq
 		}
 
 		template <typename F1, typename F2, typename F3, typename K1 = typename std::result_of<F1(T)>::type, typename K2 = typename std::result_of<F2(T)>::type, typename K3 = typename std::result_of<F3(T)>::type>
-		IEnumerable<T>& OrderBy(F1 func1, F2 func2, F3 func3)
+		IEnumerable<T, IsRef, Cont>& OrderBy(F1 func1, F2 func2, F3 func3)
 		{
+			static_assert(templ::is_sortable<K1>::value, "Values of the return type of the first passed functor must define greater-than and less-than operators.");
+			static_assert(templ::is_sortable<K2>::value, "Values of the return type of the second passed functor must define greater-than and less-than operators.");
+			static_assert(templ::is_sortable<K3>::value, "Values of the return type of the third passed functor must define greater-than and less-than operators.");
+			static_assert(!IsContConst, "Cannot call OrderBy() on an IEnumerable created from a const referenced container, a Copy() is required first.");
+
 			std::sort(this->begin(), this->end(), [&func1, &func2, &func3](T val1, T val2) -> bool
 			{
 				K1 k1v1 = func1(val1), k1v2 = func1(val2);
@@ -82,15 +258,22 @@ namespace cpplinq
 
 
 		template <typename F1, typename K1 = typename std::result_of<F1(T)>::type>
-		IEnumerable<T>& OrderByDescending(F1 func1)
+		IEnumerable<T, IsRef, Cont>& OrderByDescending(F1 func1)
 		{
+			static_assert(templ::is_sortable<K1>::value, "Values of the return type of the passed functor must define greater-than and less-than operators.");
+			static_assert(!IsContConst, "Cannot call OrderByDescending() on an IEnumerable created from a const referenced container, a Copy() is required first.");
+
 			std::sort(this->begin(), this->end(), [&func1](T val1, T val2) {return func1(val1) > func1(val2); });
 			return *this;
 		}
 
 		template <typename F1, typename F2, typename K1 = typename std::result_of<F1(T)>::type, typename K2 = typename std::result_of<F2(T)>::type>
-		IEnumerable<T>& OrderByDescending(F1 func1, F2 func2)
+		IEnumerable<T, IsRef, Cont>& OrderByDescending(F1 func1, F2 func2)
 		{
+			static_assert(templ::is_sortable<K1>::value, "Values of the return type of the first passed functor must define greater-than and less-than operators.");
+			static_assert(templ::is_sortable<K2>::value, "Values of the return type of the second passed functor must define greater-than and less-than operators.");
+			static_assert(!IsContConst, "Cannot call OrderByDescending() on an IEnumerable created from a const referenced container, a Copy() is required first.");
+
 			std::sort(this->begin(), this->end(), [&func1, &func2](T val1, T val2) -> bool
 			{
 				K1 k1v1 = func1(val1), k1v2 = func1(val2);
@@ -104,8 +287,14 @@ namespace cpplinq
 		}
 
 		template <typename F1, typename F2, typename F3, typename K1 = typename std::result_of<F1(T)>::type, typename K2 = typename std::result_of<F2(T)>::type, typename K3 = typename std::result_of<F3(T)>::type>
-		IEnumerable<T>& OrderByDescending(F1 func1, F2 func2, F3 func3)
+		IEnumerable<T, IsRef, Cont>& OrderByDescending(F1 func1, F2 func2, F3 func3)
 		{
+			static_assert(templ::is_sortable<K1>::value, "Values of the return type of the first passed functor must define greater-than and less-than operators.");
+			static_assert(templ::is_sortable<K2>::value, "Values of the return type of the second passed functor must define greater-than and less-than operators.");
+			static_assert(templ::is_sortable<K3>::value, "Values of the return type of the third passed functor must define greater-than and less-than operators.");
+			static_assert(!IsContConst, "Cannot call OrderByDescending() on an IEnumerable created from a const referenced container, a Copy() is required first.");
+
+
 			std::sort(this->begin(), this->end(), [&func1, &func2, &func3](T val1, T val2) -> bool
 			{
 				K1 k1v1 = func1(val1), k1v2 = func1(val2);
@@ -123,294 +312,416 @@ namespace cpplinq
 
 
 
-		IEnumerable<T>& Reverse()
+		IEnumerable<T, IsRef, Cont>& Reverse()
 		{
-			std::reverse(this->begin(), this->end());
+			static_assert(!IsContConst, "Cannot call Reverse() on a IEnumerable created from a const referenced container, a Copy() is required first.");
+
+			std::reverse(begin(), end());
 			return *this;
 		}
 
 		//		 SET OPERATIONS
 
-		IEnumerable<T> Except(IEnumerable<T> other)
+		template <bool B0, typename C, bool B1>
+		IEnumerable<T> Except(IEnumerable<T, B0, C, B1> other)
 		{
+			static_assert(!IsContConst, "Cannot call Except() on an IEnumerable created from a const referenced container, a Copy() is required first.");
+			static_assert(!B1, "Cannot use an IEnumerable created from a const referenced container as an argument in Except(), a Copy() is required first.");
+			static_assert(templ::is_sortable<T>::value, "Contained values must define greater-than and less-than operators.");
+
 			IEnumerable<T> ret;
-			ret.reserve(this->size() + other->size() / 2); // RESERVE
-			std::sort(this->begin(), this->end());
+			ret.reserve(size() + other.size() / 2); // RESERVE
+			std::sort(begin(), end());
 			std::sort(other.begin(), other.end());
-			std::set_difference(this->begin(), this->end(), other.begin(), other.end(), std::back_inserter(ret));
+			std::set_difference(begin(), end(), other.begin(), other.end(), std::back_inserter(ret));
 			return ret;
 		}
 
-		IEnumerable<T> Intersect(IEnumerable<T> other)
+		template <bool B0, typename C, bool B1>
+		IEnumerable<T> Intersect(IEnumerable<T, B0, C, B1> other)
 		{
+			static_assert(!IsContConst, "Cannot call Intersect() on an IEnumerable created from a const referenced container, a Copy() is required first.");
+			static_assert(!B1, "Cannot use an IEnumerable created from a const referenced container as an argument in Intersect(), a Copy() is required first.");
+			static_assert(!templ::is_sortable<T>::value, "Contained values must define greater-than and less-than operators.");
+
 			IEnumerable<T> ret;
-			ret.reserve(this->size() + other->size() / 2); // RESERVE
-			std::sort(this->begin(), this->end());
+			ret.reserve(size() + other.size() / 2); // RESERVE
+			std::sort(begin(), end());
 			std::sort(other.begin(), other.end());
-			std::set_intersection(this->begin(), this->end(), other.begin(), other.end(), std::back_inserter(ret));
+			std::set_intersection(begin(), end(), other.begin(), other.end(), std::back_inserter(ret));
 			return ret;
 		}
 
-		IEnumerable<T> Union(IEnumerable<T> other)
+		template <bool B0, typename C, bool B1>
+		IEnumerable<T> Union(IEnumerable<T, B0, C, B1> other)
 		{
+			static_assert(!IsContConst, "Cannot call Union() on an IEnumerable created from a const referenced container, a Copy() is required first.");
+			static_assert(!B1, "Cannot use an IEnumerable created from a const referenced container as an argument in Union(), a Copy() is required first.");
+			static_assert(!templ::is_sortable<T>::value, "Contained values must define greater-than and less-than operators.");
+
 			IEnumerable<T> ret;
-			ret.reserve(this->size() + other->size()); // RESERVE
-			std::sort(this->begin(), this->end());
+			ret.reserve(size() + other.size()); // RESERVE
+			std::sort(begin(), end());
 			std::sort(other.begin(), other.end());
-			std::set_union(this->begin(), this->end(), other.begin(), other.end(), std::back_inserter(ret));
+			std::set_union(begin(), end(), other.begin(), other.end(), std::back_inserter(ret));
 			return ret;
 		}
 
-		IEnumerable<T>& Distinct()
+		template <
+			typename MemMode = mem::no_alloc, 
+			bool AllowAlloc = std::is_same<MemMode, mem::auto_alloc>::value, 
+			typename RetVal = typename std::conditional<IsRef && AllowAlloc, IEnumerable<T>, IEnumerable<T>&>::type
+		>
+		RetVal Distinct()
 		{
-			std::unordered_set<T> vals;
-			vals.reserve(this->size() / 2); // RESERVE
-			std::for_each(this->begin(), this->end(), [&vals](T val) {if (vals.find(val) == vals.end()) { vals.insert(val); }});
-			this->erase(std::copy(vals.begin(), vals.end(), this->begin()), this->end());
-			return *this;
+			static_assert(!IsRef || AllowAlloc, "Cannot call Distinct() on an IEnumerable created from a referenced container, either a Copy() or specifying cpplinq::mem::auto_alloc as the first template argument is required first.");
+			static_assert(templ::is_comparable<T>::value, "Contained values must define equal and not-equal operators.");
+			static_assert(templ::is_sortable<T>::value, "Contained values must define greater-than and less-than operators.");
+
+			if (IsRef && AllowAlloc)
+			{
+				IEnumerable<T> ret;			
+				ret.reserve(size());
+				std::copy(begin(), end(), std::back_inserter(ret));
+				std::sort(ret.begin(), ret.end());
+				ret.erase(std::unique(ret.begin(), ret.end()), ret.end());
+				return ret;
+			}
+			else
+			{
+				std::sort(begin(), end());
+				erase(std::unique(begin(), end()), end());
+				return *this;
+			}		
 		}
 
 		//		 FILTERING DATA
 
-		// ordinary version 
-		template <typename F, typename _A = typename std::enable_if<std::is_same<typename std::result_of<F(T)>::type, bool>::value>::type>
-		IEnumerable<T>& Where(F func)
+		// god forgive me
+		template <
+			typename MemMode = mem::no_alloc,
+			bool AllowAlloc = std::is_same<MemMode, mem::auto_alloc>::value,
+			typename RetVal = typename std::conditional<IsRef && AllowAlloc, IEnumerable<T>, IEnumerable<T>&>::type,
+			typename F
+		>
+		RetVal Where(F func)
 		{
-			auto newend = std::copy_if(this->begin(), this->end(), this->begin(), func);
-			this->erase(newend, this->end());
-			return *this;
-		}
+			static_assert(templ::is_filter_v<F, T>, "Passed functor must have one of the following signatures: bool(T) or bool(T, int), where T is the type of the contained values.");
+			static_assert(!IsRef || AllowAlloc, "Cannot call Where() on an IEnumerable created from a referenced container, either a Copy() or specifying cpplinq::mem::auto_alloc as the first template argument is required first.");
 
-		// func takes a second parameter, which is the zero-based index of the element
-		template <typename F, typename _A = typename std::enable_if<std::is_same<typename std::result_of<F(T, int)>::type, bool>::value>::type, typename = void>
-		IEnumerable<T>& Where(F func)
-		{
 			int n = 0;
-			auto newend = std::copy_if(this->begin(), this->end(), this->begin(), [&n, &func](T val) {return func(val, n++); });
-			this->erase(newend, this->end());
-			return *this;
-		}
 
+			if (IsRef && AllowAlloc)
+			{
+				IEnumerable<T> ret;
+				ret.reserve(size()); // RESERVE
+				std::copy_if(begin(), end(), std::back_inserter(ret), [&lam, &n, &func](T val) {return templ::pt_lambda<templ::is_counter_func_v<F, T>>::ret(func, val, n++); });
+				return ret;
+			}
+			else
+			{
+				erase(std::copy_if(begin(), end(), begin(), [&lam, &n, &func](T val) {return templ::pt_lambda<templ::is_counter_func_v<F, T>>::ret(func, val, n++); }), end());
+				return *this;
+			}
+		}
+		
 		//		 QUANTIFIER OPERATIONS
 
-		template <typename F, typename _A = typename std::enable_if<std::is_same<typename std::result_of<F(T)>::type, bool>::value>::type>
+		template <typename F>
 		bool All(F func) const
 		{
-			return std::all_of(this->begin(), this->end(), func);
+			static_assert(templ::is_filter_v<F, T> && !templ::is_counter_func_v<F, T>, "Passed functor must have the following signature: bool(T), where T is the type of the contained values.");
+
+			return std::all_of(begin(), end(), func);
 		}
 
 		bool Any() const
 		{
-			return this->size() > 0;
+			return size() > 0;
 		}
 
-		template <typename F, typename _A = typename std::enable_if<std::is_same<typename std::result_of<F(T)>::type, bool>::value>::type>
+		template <typename F>
 		bool Any(F func) const
 		{
-			return std::any_of(this->begin(), this->end(), func);
+			static_assert(templ::is_filter_v<F, T> && !templ::is_counter_func_v<F, T>, "Passed functor must have the following signature: bool(T), where T is the type of the contained values.");
+
+			return std::any_of(begin(), end(), func);
 		}
 
 		bool Contains(T val) const
 		{
-			return std::find(this->begin(), this->end(), val) != this->end();
+			return std::find(begin(), end(), val) != end();
 		}
 
 		//		 PROJECTION OPERATORS
 
 		// ordinary version
-		template <typename F, typename R = typename std::result_of<F(T)>::type, typename _A = typename std::enable_if<!std::is_same<R, T>::value>::type>
+		template <
+			typename F,
+			typename R = typename templ::safe_result_of_t<F, T>,		
+			typename SFINAE_GUARD = typename std::enable_if<!std::is_same<R, T>::value || IsContConst>::type
+		>
 		IEnumerable<R> Select(F func)
 		{
-			IEnumerable<R> ret;
-			ret.reserve(this->size()); // RESERVE, UNCHANGABLE
-			std::transform(this->begin(), this->end(), std::back_inserter(ret), func);
-			return ret;
-		}
+			static_assert(!std::is_same<R, void>::value, "Passed functor must have one of the following signatures: R(T), R(T, int), T(T), T(T, int), where R is any type, and T is the type of values stored in the container.");
 
-		// func takes a second parameter, which is the zero-based index of the element
-		template <typename F, typename R = typename std::result_of<F(T, int)>::type, typename _A = typename std::enable_if<!std::is_same<R, T>::value>::type, typename = void>
-		IEnumerable<R> Select(F func)
-		{
-			IEnumerable<R> ret;
-			ret.reserve(this->size()); // RESERVE, UNCHANGABLE
 			int n = 0;
-			std::transform(this->begin(), this->end(), std::back_inserter(ret), [&n, &func](T val) {return func(val, n++); });
-			return ret;
+
+			IEnumerable<R> ret;
+			ret.reserve(size()); // RESERVE, UNCHANGABLE
+			std::transform(begin(), end(), std::back_inserter(ret), [&lam, &n, &func](T val) {return templ::pt_lambda<templ::is_counter_func_v<F, T>>::ret(func, val, n++); });
+			return ret;			
 		}
 		
-		// ordinary version, R == T
-		template <typename F, typename _A = typename std::enable_if<std::is_same<typename std::result_of<F(T)>::type, T>::value>::type, typename = void, typename = void, typename = void>
+		template <
+			typename F,
+			typename R = typename templ::safe_result_of_t<F, T>,
+			typename SFINAE_GUARD = typename std::enable_if<std::is_same<R, T>::value && !IsContConst>::type
+		>
 		IEnumerable<T>& Select(F func)
 		{
-			std::transform(this->begin(), this->end(), this->begin(), func);
-			return *this;
-		}
+			static_assert(!std::is_same<R, void>::value, "Passed functor must have one of the following signatures: R(T), R(T, int), T(T), T(T, int), where R is any type, and T is the type of values stored in the container.");
 
-		// func takes a second parameter, which is the zero-based index of the element, R == T
-		template <typename F, typename _A = typename std::enable_if<std::is_same<typename std::result_of<F(T, int)>::type, T>::value>::type, typename = void, typename = void, typename = void, typename = void>
-		IEnumerable<T>& Select(F func)
-		{
 			int n = 0;
-			std::transform(this->begin(), this->end(), this->begin(), [&n, &func](T val) {return func(val, n++); });
+
+			std::transform(begin(), end(), begin(), [&lam, &n, &func](T val) {return templ::pt_lambda<templ::is_counter_func_v<F, T>>::ret(func, val, n++); });
 			return *this;
 		}
 
+		
 		// ordinary version
-		template <typename F, typename RC = typename std::result_of<F(T)>::type, typename R = typename RC::value_type>
+		template <
+			typename F,
+			typename RC = typename templ::safe_result_of_t<F, T>,
+			typename R = typename templ::value_type_t<RC>
+		>
 		IEnumerable<R> SelectMany(F func)
 		{
+			static_assert(!std::is_same<RC, void>::value, "Passed selection functor must have the following signature: RC(T) or RC(T, int), where RC is a container, and T is the type of the contained elements within this container.");
+			static_assert(!templ::is_container<RC>::value, "Return type of the passed functor must implement begin() and end().");
+			
 			IEnumerable<R> ret;
-			IEnumerable<RC> inter;
-			ret.reserve(this->size()); // RESERVING
-			inter.reserve(this->size()); // RESERVING, unavoidable
-			std::transform(this->begin(), this->end(), std::back_inserter(inter), func);
-			std::for_each(inter.begin(), inter.end(), [&ret](RC& rc) {std::copy(rc.begin(), rc.end(), std::back_inserter(ret)); });
-			return ret;
-		}
+			ret.reserve(size()); // RESERVING
 
-		// func takes a second parameter, which is the zero-based index of the element
-		template <typename F, typename RC = typename std::result_of<F(T, int)>::type, typename R = typename RC::value_type, typename = void>
-		IEnumerable<R> SelectMany(F func)
-		{
-			IEnumerable<R> ret;
-			IEnumerable<RC> inter;
-			ret.reserve(this->size()); // RESERVING
-			inter.reserve(this->size()); // RESERVING, unavoidable
 			int n = 0;
-			std::transform(this->begin(), this->end(), std::back_inserter(inter), [&n, &func](T val) {return func(val, n++); });
-			std::for_each(inter.begin(), inter.end(), [&ret](RC& rc) {std::copy(rc.begin(), rc.end(), std::back_inserter(ret)); });
+
+			std::for_each(begin(), end(), [&ret, &func](T val)
+			{
+				RC rc = templ::pt_lambda<templ::is_counter_func_v<F, T>::value>::ret(func, val, n++);
+				std::copy(rc.begin(), rc.end(), std::back_inserter(ret));
+			});
+
 			return ret;
 		}
 
-		// ordinary version with result selector
-		template <typename F, typename P, typename RC = typename std::result_of<F(T)>::type, typename R = typename std::result_of<P(T, typename RC::value_type)>::type>
+		// result selector version
+		template <
+			typename F,
+			typename P,
+			typename RC = typename templ::safe_result_of_t<F, T>,
+			typename RC_val = typename templ::value_type_t<RC>,
+			typename R = typename templ::sanitizer_t<P, RC_val, T>
+		>
 		IEnumerable<R> SelectMany(F func, P result_selector)
 		{
+			static_assert(!std::is_same<RC, void>::value, "Passed selection functor must have the following signature: RC(T) or RC(T, int), where RC is a container, and T is the type of the contained elements within this container.");
+			static_assert(templ::is_container<RC>::value, "Return type of the passed selection functor must implement begin() and end().");
+			static_assert(!std::is_same<R, void>::value, "Passed result selector functor must have the following signature: R(RC_val, T), where R is any type, RC_val is the type of the contained elements of container returned by the selection functor, and T is the type of the contained elements within this container.");
+	
 			IEnumerable<R> ret;
-			std::unordered_map<T, RC> inter;
-			ret.reserve(this->size()); // RESERVING
-			inter.reserve(this->size()); // RESERVING, unavoidable
-			std::for_each(this->begin(), this->end(), [&inter, &func](T val) {inter[val] = func(val); });
-			std::for_each(inter.begin(), inter.end(), [&ret, &result_selector](std::pair<T, RC>& rc)
+			ret.reserve(size()); // RESERVING
+
+			int n = 0;
+
+			std::for_each(begin(), end(), [&ret, &func](T val)
 			{
-				std::transform(rc.second.begin(), rc.second.end(), std::back_inserter(ret), [&rc, &result_selector](typename RC::value_type val) 
-				{
-					return result_selector(rc.first, val); 
-				}); 
+				RC rc = templ::pt_lambda<templ::is_counter_func_v<F, T>::value>::ret(func, val, n++);
+				std::transform(rc.begin(), rc.end(), std::back_inserter(ret), [&val](RC_val rcval) {return result_selector(rcval, val); });
 			});
+
 			return ret;
 		}
 
-		// func takes a second parameter, which is the zero-based index of the element with result selector
-		template <typename F, typename P, typename RC = typename std::result_of<F(T, int)>::type, typename R = typename std::result_of<P(T, typename RC::value_type)>::type, typename = void>
-		IEnumerable<R> SelectMany(F func, P result_selector)
-		{
-			IEnumerable<R> ret;
-			std::unordered_map<T, RC> inter;
-			ret.reserve(this->size()); // RESERVING
-			inter.reserve(this->size()); // RESERVING, unavoidable
-			int n = 0;
-			std::for_each(this->begin(), this->end(), [&inter, &func, &n](T val) {inter[val] = func(val, n++); });
-			std::for_each(inter.begin(), inter.end(), [&ret, &result_selector](std::pair<T, RC>& rc)
-			{
-				std::transform(rc.second.begin(), rc.second.end(), std::back_inserter(ret), [&rc, &result_selector](typename RC::value_type val)
-				{
-					return result_selector(rc.first, val);
-				});
-			});
-			return ret;
-		}
 
 		//		 PARTITIONING DATA
 
-		IEnumerable<T>& Skip(int n)
+		template <
+			typename MemMode = mem::no_alloc, 
+			bool AllowAlloc = std::is_same<MemMode, mem::auto_alloc>::value, 
+			typename RetVal = typename std::conditional<IsRef && AllowAlloc, IEnumerable<T>, IEnumerable<T>&>::type
+		>
+		RetVal Skip(int n)
 		{
-			this->erase(this->begin(), this->begin() + std::min(n, (int)this->size()));
-			return *this;
+			static_assert(!IsRef || AllowAlloc, "Cannot call Skip() on an IEnumerable created from a referenced container, a Copy() or setting the first template argument to cpplinq::mem::auto_alloc is required first.");
+
+			if (IsRef && AllowAlloc)
+			{
+				IEnumerable<T> ret;
+				ret.reserve(std::max(size() - n, 0));
+				std::copy(begin() + n, end(), std::back_inserter(ret));
+				return ret;
+			}
+			else
+			{
+				erase(begin(), begin() + std::min(n, (int)size()));
+				return *this;
+			}
 		}
-		
-		IEnumerable<T>& Take(int n)
+
+		template <
+			typename MemMode = mem::no_alloc, 
+			bool AllowAlloc = std::is_same<MemMode, mem::auto_alloc>::value, 
+			typename RetVal = typename std::conditional<IsRef && AllowAlloc, IEnumerable<T>, IEnumerable<T>&>::type
+		>
+		RetVal Take(int n)
 		{
-			this->erase(this->begin() + std::min(n, (int)this->size()), this->end());
-			return *this;
+			static_assert(!IsRef || AllowAlloc, "Cannot call Take() on an IEnumerable created from a referenced container, a Copy() or setting the first template argument to cpplinq::mem::auto_alloc is required first.");
+
+			if (IsRef && AllowAlloc)
+			{
+				IEnumerable<T> ret;
+				ret.reserve(std::min(size(), n));
+				std::copy(begin(), begin() + std::min(n, (int)size()), std::back_inserter(ret));
+				return ret;
+			}
+			else
+			{
+				erase(begin(), begin() + std::min(n, (int)size()));
+				return *this;
+			}
 		}
 
 		// ordinary version
-		template <typename F, typename _A = typename std::enable_if<std::is_same<typename std::result_of<F(T)>::type, bool>::value>::type>
-		IEnumerable<T>& TakeWhile(F func)
+		template <
+			typename MemMode = mem::no_alloc,
+			bool AllowAlloc = std::is_same<MemMode, mem::auto_alloc>::value, 
+			typename RetVal = typename std::conditional<IsRef && AllowAlloc, IEnumerable<T>, IEnumerable<T>&>::type, 
+			typename F
+		>
+		RetVal TakeWhile(F func)
 		{
-			this->erase(std::find_if_not(this->begin(), this->end(), func), this->end());
-			return *this;
-		}
+			static_assert(templ::is_filter_v<F, T>, "Passed functor must have one of the following signatures: bool(T), bool(T, int), where T is the type of the contained values.");
+			static_assert(!IsRef || AllowAlloc, "Cannot call TakeWhile() on an IEnumerable created from a referenced container, a Copy() is required first.");
 
-		// func takes a second parameter, which is the zero-based index of the element
-		template <typename F, typename _A = typename std::enable_if<std::is_same<typename std::result_of<F(T, int)>::type, bool>::value>::type, typename = void>
-		IEnumerable<T>& TakeWhile(F func)
-		{
 			int n = 0;
-			this->erase(std::find_if_not(this->begin(), this->end(), [&func, &n](T t) {return func(t, n++); }), this->end());
-			return *this;
+
+			if (IsRef && AllowAlloc)
+			{
+				IEnumerable<T> ret;
+				ret.reserve(size()); // RESERVE
+				std::copy(begin(), std::find_if_not(begin(), end(), [&func, &n](T val) {return templ::pt_lambda<templ::is_counter_func_v<F, T>>::ret(func, val, n++); }), std::back_inserter(ret));
+				return ret;
+			}
+			else
+			{
+				erase(std::find_if_not(begin(), end(), [&func, &n](T val) {return templ::pt_lambda<templ::is_counter_func_v<F, T>>::ret(func, val, n++); }), end());
+				return *this;
+			}	
 		}
 
 		// ordinary version
-		template <typename F, typename _A = typename std::enable_if<std::is_same<typename std::result_of<F(T)>::type, bool>::value>::type>
-		IEnumerable<T>& SkipWhile(F func)
+		template <
+			typename MemMode = mem::no_alloc, 
+			bool AllowAlloc = std::is_same<MemMode, mem::auto_alloc>::value, 
+			typename RetVal = typename std::conditional<IsRef && AllowAlloc, IEnumerable<T>, IEnumerable<T>&>::type, 
+			typename F
+		>
+		RetVal SkipWhile(F func)
 		{
-			this->erase(this->begin(), std::find_if_not(this->begin(), this->end(), func));
-			return *this;
+			static_assert(templ::is_filter_v<F, T>, "Passed functor must have one of the following signatures: bool(T), bool(T, int), where T is the type of the contained values.");
+			static_assert(!IsRef || AllowAlloc, "Cannot call SkipWhile() on an IEnumerable created from a referenced container, a Copy() is required first.");
+
+			int n = 0;
+
+			if (IsRef && AllowAlloc)
+			{
+				IEnumerable<T> ret;
+				ret.reserve(size()); // RESERVE
+				std::copy(std::find_if_not(begin(), end(), [&func, &n](T val) {return templ::pt_lambda<templ::is_counter_func_v<F, T>>::ret(func, val, n++); }), end(), std::back_inserter(ret));
+				return ret;
+			}
+			else
+			{
+				erase(begin(), std::find_if_not(begin(), end(), [&func, &n](T val) {return templ::pt_lambda<templ::is_counter_func_v<F, T>>::ret(func, val, n++); }));
+				return *this;
+			}		
 		}
 
-		// func takes a second parameter, which is the zero-based index of the element
-		template <typename F, typename _A = typename std::enable_if<std::is_same<typename std::result_of<F(T, int)>::type, bool>::value>::type, typename = void>
-		IEnumerable<T>& SkipWhile(F func)
-		{
-			int n = 0;
-			this->erase(this->begin(), std::find_if_not(this->begin(), this->end(), [&func, &n](T t) {return func(t, n++); }));
-			return *this;
-		}
 
 		//		 JOIN OPERATORS
 
-		template <typename FOuterKey, typename FInnerKey, typename FJoin, typename TInner, typename TOuter = T, typename TKey = typename std::result_of<FOuterKey(TOuter)>::type, typename TJoined = typename std::result_of<FJoin(TOuter, TInner)>::type, typename _AInnerKey = typename std::enable_if<std::is_same<typename std::result_of<FInnerKey(TInner)>::type, TKey>::value>::type>
-		IEnumerable<TJoined> Join(const IEnumerable<TInner>& innerkeys, FOuterKey outerkeyselector, FInnerKey innerkeyselector, FJoin joiner)
-		{
-			IEnumerable<TJoined> ret; 
-			std::unordered_map<TKey, TInner> innervals;
-			ret.reserve(this->size()); // RESERVE
-			innervals.reserve(this->size()); // RESERVE
+		//TODO: something about join
 
-			std::for_each(innerkeys.begin(), innerkeys.end(), [&innervals, &innerkeyselector](TInner innerval) {innervals[innerkeyselector(innerval)] = innerval; });
-			std::for_each(this->begin(), this->end(), [&innervals, &outerkeyselector, &joiner, &ret](TOuter outerval)
+		template <
+			bool B0, class C, bool B1,
+			typename FOuterKey,
+			typename FInnerKey,
+			typename FJoin,
+			typename TInner,
+			typename TKey = typename templ::sanitizer_t<FOuterKey, T>,
+			typename TJoined = typename templ::sanitizer_t<FJoin, T, TInner>
+		>
+		IEnumerable<TJoined> Join(const IEnumerable<TInner, B0, C, B1>& innerkeys, FOuterKey outerkeyselector, FInnerKey innerkeyselector, FJoin joiner)
+		{
+			static_assert(!std::is_same<TKey, void>, "Passed outer key selector must have the following signature: TKey(T), where TKey is any type implementing operator== and operator!= and T is the type of the values contained within this container.");
+			static_assert(!templ::is_comparable_v<TKey>, "The values returned by the outer key selector must implement operator== and operator!=.");
+			static_assert(templ::is_func_v<FInnerKey, TInner, TKey>, "Passed inner key selector must have the following signature: TKey(TInner), where TKey is the type returned by the outer key selector and TInner is the type of the values contained within the innerkeys container.");
+			static_assert(!std::is_same<TJoined, void>, "Passed joiner must have the following signature: TJoined(T, TInner), where TJoined is any type, T is the type of values contained within this container and TInner is the type of the values contained within the innerkeys container.");
+
+			IEnumerable<TJoined> ret; 
+
+			std::vector<std::pair<TKey, TValue>> innervals;
+			innervals.reserve(size()); // RESERVE unchangable
+			ret.reserve(size()); // RESERVE
+			
+			std::for_each(innerkeys.begin(), innerkeys.end(), [&innervals, &innerkeyselector](TInner innerval) {innervals.push_back(std::make_pair(innerkeyselector(innerval), innerval)); });
+			std::for_each(begin(), end(), [&innervals, &outerkeyselector, &joiner, &ret](TOuter outerval)
 			{
 				TKey key = outerkeyselector(outerval);
+				auto iter = std::find_if(innervals.begin(), innervals.end(), [&key](std::pair<TKey, TValue> p) {return key == p.first; });
 
-				if (innervals.count(key))
+				if (iter != innervals.end())
 				{
-					ret.push_back(joiner(outerval, innervals[key]));
+					ret.push_back(joiner(outerval, *iter));
 				}
 			});
 			return ret;
 		}
 
-		template <typename FOuterKey, typename FInnerKey, typename FJoin, typename TInner, typename TOuter = T, typename TKey = typename std::result_of<FOuterKey(TOuter)>::type, typename TJoined = typename std::result_of<FJoin(TOuter, IEnumerable<TInner>)>::type, typename _AInnerKey = typename std::enable_if<std::is_same<typename std::result_of<FInnerKey(TInner)>::type, TKey>::value>::type>
-		IEnumerable<TJoined> GroupJoin(const IEnumerable<TInner>& innerkeys, FOuterKey outerkeyselector, FInnerKey innerkeyselector, FJoin joiner)
+		template <
+			bool B0, class C, bool B1,
+			typename FOuterKey, 
+			typename FInnerKey, 
+			typename FJoin, 
+			typename TInner,
+			typename TKey = typename templ::sanitizer_t<FOuterKey, T>,
+			typename TJoined = typename templ::sanitizer_t<FJoin, T, templ::dummy_iterator_t<TInner>, templ::dummy_iterator_t<TInner>>
+		>
+		IEnumerable<TJoined> GroupJoin(const IEnumerable<TInner, B0, C, B1>& innerkeys, FOuterKey outerkeyselector, FInnerKey innerkeyselector, FJoin joiner)
 		{
-			IEnumerable<TJoined> ret;
-			std::unordered_multimap<TKey, TInner> innervals;
-			ret.reserve(this->size()); // RESERVE
-			innervals.reserve(this->size()); // RESERVE
 
-			std::for_each(innerkeys.begin(), innerkeys.end(), [&innervals, &innerkeyselector](TInner innerval) {innervals.insert(std::make_pair(innerkeyselector(innerval), innerval)); });
-			std::for_each(this->begin(), this->end(), [&innervals, &outerkeyselector, &joiner, &ret](TOuter outerval)
+
+			static_assert(!std::is_same<TKey, void>, "Passed outer key selector must have the following signature: TKey(T), where TKey is any type implementing operator== and operator!= and T is the type of the values contained within this container.");
+			static_assert(!templ::is_comparable_v<TKey>, "The values returned by the outer key selector must implement operator== and operator!=.");
+			static_assert(templ::is_func_v<FInnerKey, TInner, TKey>, "Passed inner key selector must have the following signature: TKey(TInner), where TKey is the type returned by the outer key selector and TInner is the type of the values contained within the innerkeys container.");
+			static_assert(!std::is_same<TJoined, void>, "Passed joiner must have the following signature: TJoined(T, Iter<TInner>, Iter<TInner>), where TJoined is any type, T is the type of values contained within this container and Iter<TInner> is the type of an iterator to a collection of objects of type of the the type of the values contained within the innerkeys container.");
+
+			IEnumerable<TJoined> ret;
+
+			std::vector<std::pair<TKey, TInner>> innervals;
+			ret.reserve(size()); // RESERVE
+			innervals.reserve(size()); // RESERVE
+
+			std::for_each(innerkeys.begin(), innerkeys.end(), [&innervals, &innerkeyselector](TInner innerval) {innervals.push_back(std::make_pair(innerkeyselector(innerval), innerval)); });
+			std::for_each(begin(), end(), [&innervals, &outerkeyselector, &joiner, &ret](TOuter outerval)
 			{
 				TKey key = outerkeyselector(outerval);
-				
-				if (innervals.count(key))
-				{
-					auto range = innervals.equal_range(key);
-					IEnumerable<TInner> block;
-					std::for_each(range.first, range.second, [&block](std::pair<TKey, TInner> p) {block.push_back(p.second); });
-					ret.push_back(joiner(outerval, block));
+				std::vector<TInner> block;
+
+				std::for_each(innervals.begin(), innervals.end(), [&key, &block](std::pair<TKey, TInner> p) {if (p.first == key) { block.push_back(p.second); }});
+				if (block.size() != 0) 
+				{ 
+					ret.push_back(joiner(outerval, block.begin(), block.end())); 
 				}
 			});
 			return ret;
@@ -422,16 +733,52 @@ namespace cpplinq
 
 		//		 GENERATION OPERATORS
 
-		IEnumerable<T>& DefaultIfEmpty()
+		template <
+			typename MemMode = mem::no_alloc, 
+			bool AllowAlloc = std::is_same<MemMode, mem::auto_alloc>::value,
+			typename RetVal = typename std::conditional<IsRef && AllowAlloc, IEnumerable<T>, IEnumerable<T>&>::type
+		>
+		RetVal DefaultIfEmpty()
 		{
-			if (this->Any()) { return *this; }
-			else { this->push_back(T()); return *this; }
+			static_assert(!IsRef || AllowAlloc, "Cannot call DefaultIfEmpty() on an IEnumerable created from a referenced container, a Copy() is required first.");
+
+			if (IsRef && AllowAlloc)
+			{
+				IEnumerable<T> ret;
+				ret.reserve(size());
+				std::copy(begin(), end(), std::back_inserter(ret));
+				if (Any()) { return ret; }
+				else { ret.push_back(T()); return ret; }
+			}
+			else
+			{
+				if (Any()) { return *this; }
+				else { push_back(T()); return *this; }
+			}
 		}
 
-		IEnumerable<T>& DefaultIfEmpty(T val)
+		template <
+			typename MemMode = mem::no_alloc,
+			bool AllowAlloc = std::is_same<MemMode, mem::auto_alloc>::value, 
+			typename RetVal = typename std::conditional<IsRef && AllowAlloc, IEnumerable<T>, IEnumerable<T>&>::type
+		>
+		RetVal DefaultIfEmpty(T val)
 		{
-			if (this->Any()) { return *this; }
-			else { this->push_back(val); return *this; }
+			static_assert(!IsRef || AllowAlloc, "Cannot call DefaultIfEmpty() on an IEnumerable created from a referenced container, a Copy() is required first.");
+
+			if (IsRef && AllowAlloc)
+			{
+				IEnumerable<T> ret;
+				ret.reserve(size());
+				std::copy(begin(), end(), std::back_inserter(ret));
+				if (Any()) { return ret; }
+				else { ret.push_back(val); return ret; }
+			}
+			else
+			{
+				if (Any()) { return *this; }
+				else { push_back(val); return *this; }
+			}
 		}
 
 		static IEnumerable<T> Empty()
@@ -464,9 +811,12 @@ namespace cpplinq
 
 		//		 EQUALITY OPERATORS	
 
-		bool SequenceEqual(const IEnumerable<T>& other) const
+		template <bool B0, typename C, bool B1>
+		bool SequenceEqual(const IEnumerable<T, B0, C, B1>& other) const
 		{
-			return std::equal(this->begin(), this->end(), other->begin());
+			static_assert(templ::is_comparable_v<T>, "Type of the contained values must implement operator== and operator!=.");
+
+			return std::equal(begin(), end(), begin());
 		}
 
 		//		 ELEMENT OPERATORS
@@ -474,7 +824,7 @@ namespace cpplinq
 		T ElementAt(int index) const
 		{
 			if (index < this->size()) {return *this[index]; }
-			else throw std::out_of_range("IEnumberable<T>::ElementAt(int index) | Index out of range.");
+			else throw std::out_of_range("IEnumerable<T>::ElementAt(int index) | Index out of range.");
 		}
 
 		T ElementAtOrDefault(int index) const
@@ -486,16 +836,18 @@ namespace cpplinq
 		T First() const
 		{
 			if (this->Any()) {return this->front(); }
-			else throw std::length_error("IEnumberable<T>::First() | IEnumerable<T> is empty.");
+			else throw std::length_error("IEnumerable<T>::First() | IEnumerable<T> is empty.");
 		}
 
-		template <typename F, typename _A = typename std::enable_if<std::is_same<typename std::result_of<F(T)>::type, bool>::value>::type>
+		template <typename F>
 		T First(F func) const
 		{
+			static_assert(templ::is_filter_v<F, T>, "The passed functor must have the following signature: bool(T).");
+
 			auto v = std::find_if(this->begin(), this->end(), func);
 			if (v == this->end())
 			{
-				throw std::length_error("IEnumberable<T>::First(F func) | No element satisfies the selection function.");
+				throw std::length_error("IEnumerable<T>::First(F func) | No element satisfies the selection function.");
 			}
 			return *v;
 		}
@@ -506,9 +858,11 @@ namespace cpplinq
 			else return T();
 		}
 
-		template <typename F, typename _A = typename std::enable_if<std::is_same<typename std::result_of<F(T)>::type, bool>::value>::type>
+		template <typename F>
 		T FirstOrDefault(F func) const
 		{
+			static_assert(templ::is_filter_v<F, T>, "The passed functor must have the following signature: bool(T).");
+
 			auto v = std::find_if(this->begin(), this->end(), func);
 			if (v == this->end())
 			{
@@ -523,9 +877,11 @@ namespace cpplinq
 			else throw std::length_error("IEnumberable<T>::Last() | IEnumerable<T> is empty.");
 		}
 
-		template <typename F, typename _A = typename std::enable_if<std::is_same<typename std::result_of<F(T)>::type, bool>::value>::type>
+		template <typename F>
 		T Last(F func) const
 		{
+			static_assert(templ::is_filter_v<F, T>, "The passed functor must have the following signature: bool(T).");
+
 			auto v = std::find_if(this->rbegin(), this->rend(), func);
 			if (v == this->rend())
 			{
@@ -540,9 +896,11 @@ namespace cpplinq
 			else return T();
 		}
 
-		template <typename F, typename _A = typename std::enable_if<std::is_same<typename std::result_of<F(T)>::type, bool>::value>::type>
+		template <typename F>
 		T LastOrDefault(F func) const
 		{
+			static_assert(templ::is_filter_v<F, T>, "The passed functor must have the following signature: bool(T).");
+
 			auto v = std::find_if(this->rbegin(), this->rend(), func);
 			if (v == this->rend())
 			{
@@ -557,15 +915,17 @@ namespace cpplinq
 			else throw std::length_error("IEnumberable<T>::Single() | Size isn't exactly 1.");
 		}
 
-		template <typename F, typename _A = typename std::enable_if<std::is_same<typename std::result_of<F(T)>::type, bool>::value>::type>
+		template <typename F>
 		T Single(F func) const
 		{
+			static_assert(templ::is_filter_v<F, T>, "The passed functor must have the following signature: bool(T).");
+
 			T retval;
 			int n = 0;
 
 			std::for_each(this->begin(), this->end(), [&retval, &func, &n](T val) 
 			{
-				if (func(val) == true) 
+				if (func(val)) 
 				{ 
 					if (n == 0) { n++; retval = val; } 
 					else 
@@ -586,9 +946,11 @@ namespace cpplinq
 			else throw std::length_error("IEnumberable<T>::SingleOrDefault() | Size of IEnumerable<T> is bigger than 1.");
 		}
 
-		template <typename F, typename _A = typename std::enable_if<std::is_same<typename std::result_of<F(T)>::type, bool>::value>::type>
+		template <typename F>
 		T SingleOrDefault(F func) const
 		{
+			static_assert(templ::is_filter_v<F, T>, "The passed functor must have the following signature: bool(T).");
+
 			T retval;
 			int n = 0;
 
@@ -686,35 +1048,72 @@ namespace cpplinq
 
 		//		CONCATENATION OPERATORS
 
-		IEnumerable<T>& Concat(const IEnumerable<T>& other)
+		template <
+			typename MemMode = mem::no_alloc, 
+			bool AllowAlloc = std::is_same<MemMode, mem::auto_alloc>::value, 
+			typename RetVal = typename std::conditional<IsRef && AllowAlloc, IEnumerable<T>, IEnumerable<T>&>::type, 
+			bool B0, typename C, bool B1
+		>
+		RetVal Concat(const IEnumerable<T, B0, C, B1>& other)
 		{
-			std::copy(other.begin(), other.end(), std::back_inserter(*this));
-			return *this;
+			static_assert(!IsRef || AllowAlloc, "Cannot call Concat() on an IEnumerable created from a referenced container, a Copy() is required first.");
+
+			if (IsRef && AllowAlloc)
+			{
+				IEnumerable<T> ret;
+				ret.reserve(size() + other.size());
+				std::copy(begin(), end(), std::back_inserter(ret));
+				std::copy(other.begin(), other.end(), std::back_inserter(ret));
+				return ret;
+			}
+			else
+			{
+				std::copy(other.begin(), other.end(), std::back_inserter(*this));
+				return *this;
+			}
 		}
 
 		//		AGGREGATION OPERATORS
 
-		template <typename F, typename _A = typename std::enable_if<std::is_same<typename std::result_of<F(T, T)>::type, T>::value>::type>
-		T Aggregate(F func) const
+		template <typename F>
+		T Aggregate(F func) 
 		{
-			return std::accumulate(this->begin(), this->end(), T(), func);
+			static_assert(templ::is_func_v<F, T, T, T>, "Passed functor must have one of the following signatures: T(T, T), V(V, T), where V is any type.");
+
+			return std::accumulate(begin(), end(), T(), func);
 		}
 
-		template <typename F, typename V, typename _A = typename std::enable_if<std::is_same<typename std::result_of<F(V, T)>::type, V>::value>::type>
+		template <typename F, typename V>
 		V Aggregate(V val, F func) const
 		{
+			static_assert(templ::is_func_v<F, V, V, T>, "Passed functor must have one of the following signatures: T(T, T), V(V, T), where V is any type.");
+
 			return std::accumulate(this->begin(), this->end(), val, func);
 		}
 
-		template <typename F, typename R, typename V, typename E = typename std::result_of<R(V)>, typename _A = typename std::enable_if<std::is_same<typename std::result_of<F(V, T)>::type, V>::value>::type>
+		template <
+			typename F, 
+			typename R, 
+			typename V, 
+			typename E = typename templ::sanitizer_t<R, V>
+		>
 		E Aggregate(V val, F func, R retfunc) const
 		{
+			static_assert(templ::is_func_v<F, V, V, T>, "Passed functor must have the following signature: V(V, T), where V is any type.");
+			static_assert(!std::is_same<E, void>, "Passed return functor must have the following signature: E(V), where E is any type and V is the type returned by the accumulating functor.");
+
 			return retfunc(std::accumulate(this->begin(), this->end(), val, func));
 		}
 
-		template <typename F, typename N = typename std::result_of<F(T)>, typename _A = typename std::enable_if<std::is_arithmetic<N>::value>::type>
+		template <
+			typename F, 
+			typename N = typename templ::sanitizer_t<F, T>
+		>
 		N Average(F func) const
 		{
+			static_assert(!is_same<N, void>, "Passed functor must have the following signature: N(T), where N is any arithmetic type.");
+			static_assert(std::is_arithmetic<N>::value, "Passed functor must return an arithmetic type.");
+
 			if (this->size() == 0) { throw std::logic_error("IEnumerable<T>::Average(F func) | IEnumerable<T> is empty."); }
 
 			N val = N(0);
@@ -722,9 +1121,9 @@ namespace cpplinq
 			return val / this->size();
 		}
 
-		template <typename _A = typename std::enable_if<std::is_arithmetic<T>::value>::type>
 		T Average() const
 		{
+			static_assert(std::is_arithmetic<T>::value, "T must be an arithmetic type.");
 			if (this->size() == 0) { throw std::logic_error("IEnumerable<T>::Average() | IEnumerable<T> is empty."); }
 
 			T val = T(0);
@@ -737,400 +1136,110 @@ namespace cpplinq
 			return this->size();
 		}
 
-		template <typename F, typename _A = typename std::enable_if<std::is_same<typename std::result_of<F(T)>::type, bool>::value>::type>
+		template <typename F>
 		std::size_t Count(F func) const
 		{
+			static_assert(templ::is_filter_v<F, T>, "Passed functor must have the following signature: bool(T).");
+
 			return std::accumulate(this->begin(), this->end(), 0, [&func](int a, T val) {if (func(val)) { return ++a; } else return a; });
 		}
 
-		template <typename F, typename N = typename std::result_of<F(T)>::type, typename _A = typename std::enable_if<std::is_arithmetic<N>::value>::type>
+		template <
+			typename F,
+			typename N = typename templ::sanitizer_t<F, T>
+		>
 		N Max(F func) const
 		{
+			static_assert(!is_same<N, void>, "Passed functor must have the following signature: N(T), where N is any arithmetic type.");
+			static_assert(std::is_arithmetic<N>::value, "Passed functor must return an arithmetic type.");
+
+			if (this->size() == 0) { throw std::logic_error("IEnumerable<T>::Max(F func) | IEnumerable<T> is empty."); }
+
 			N val;
 			bool first = false;
 			std::for_each(this->begin(), this->end(), [&val, &first, &func](T v) {if (!first) { first = true; val = func(v); } else { val = std::max(val, func(v)); }});
 			return val;
 		}
 
-		template <typename _A = typename std::enable_if<std::is_arithmetic<T>::value>::type>
 		T Max() const
 		{
+			static_assert(std::is_arithmetic<T>::value, "T must be an arithmetic type.");
+			
+			if (this->size() == 0) { throw std::logic_error("IEnumerable<T>::Max() | IEnumerable<T> is empty."); }
+
 			T val;
 			bool first = false;
 			std::for_each(this->begin(), this->end(), [&val, &first](T v) {if (!first) { first = true; val = v; } else { val = std::max(val, v); }});
 			return val;
 		}
 
-		template <typename F, typename N = typename std::result_of<F(T)>::type, typename _A = typename std::enable_if<std::is_arithmetic<N>::value>::type>
+		template <
+			typename F,
+			typename N = typename templ::sanitizer_t<F, T>
+		>		
 		N Min(F func) const
 		{
+			static_assert(!is_same<N, void>, "Passed functor must have the following signature: N(T), where N is any arithmetic type.");
+			static_assert(std::is_arithmetic<N>::value, "Passed functor must return an arithmetic type.");
+
+			if (this->size() == 0) { throw std::logic_error("IEnumerable<T>::Min(F func) | IEnumerable<T> is empty."); }
+
 			N val;
 			bool first = false;
 			std::for_each(this->begin(), this->end(), [&val, &first, &func](T v) {if (!first) { first = true; val = func(v); } else { val = std::min(val, func(v)); }});
 			return val;
 		}
 
-		template <typename _A = typename std::enable_if<std::is_arithmetic<T>::value>::type>
 		T Min() const
 		{
+			static_assert(std::is_arithmetic<T>::value, "T must be an arithmetic type.");
+			
+			if (this->size() == 0) { throw std::logic_error("IEnumerable<T>::Min() | IEnumerable<T> is empty."); }
+
 			T val;
 			bool first = false;
 			std::for_each(this->begin(), this->end(), [&val, &first](T v) {if (!first) { first = true; val = v; } else { val = std::min(val, v); }});
 			return val;
 		}
 
-		template <typename F, typename N = typename std::result_of<F(T)>::type, typename _A = typename std::enable_if<std::is_arithmetic<N>::value>::type>
+		template <
+			typename F,
+			typename N = typename templ::sanitizer_t<F, T>
+		>			
 		N Sum(F func) const
 		{
+			static_assert(!is_same<N, void>, "Passed functor must have the following signature: N(T), where N is any arithmetic type.");
+			static_assert(std::is_arithmetic<N>::value, "Passed functor must return an arithmetic type.");
+
 			N val = N(0);
 			std::for_each(this->begin(), this->end(), [&val, &func](T v) {val += func(v); });
 			return val;
 		}
 
-		template <typename _A = typename std::enable_if<std::is_arithmetic<T>::value>::type>
 		T Sum() const
 		{
+			static_assert(std::is_arithmetic<T>::value, "T must be an arithmetic type.");
+
 			T val = T(0);
 			std::for_each(this->begin(), this->end(), [&val](T v) {val += v; });
 			return val;
 		}
-	};
-
-	//template <typename Cont, bool Const = std::is_const<Cont>::value, typename T = std::decay<decltype(*(std::declval<Cont>().begin()))>::type>
-	template <typename Cont, bool Const, typename T>
-	struct RefIEnumerable
-	{
-		RefIEnumerable(Cont& cont) : ref(cont) {};
-		RefIEnumerable() = delete;
-
-		template <typename F, typename _A = typename std::enable_if<std::is_same<typename std::result_of<F(T, T)>::type, T>::value>::type>
-		T Aggregate(F func) const
-		{
-			return std::accumulate(ref.begin(), ref.end(), T(), func);
-		}
-
-		template <typename F, typename V, typename _A = typename std::enable_if<std::is_same<typename std::result_of<F(V, T)>::type, V>::value>::type>
-		V Aggregate(V val, F func) const
-		{
-			return std::accumulate(ref.begin(), ref.end(), val, func);
-		}
-
-		template <typename F, typename R, typename V, typename E = typename std::result_of<R(V)>, typename _A = typename std::enable_if<std::is_same<typename std::result_of<F(V, T)>::type, V>::value>::type>
-		E Aggregate(V val, F func, R retfunc) const
-		{
-			return retfunc(std::accumulate(ref.begin(), ref.end(), val, func));
-		}
-
-		template <typename F, typename N = typename std::result_of<F(T)>, typename _A = typename std::enable_if<std::is_arithmetic<N>::value>::type>
-		N Average(F func) const
-		{
-			N val = N(0);
-			std::for_each(ref.begin(), ref.end(), [&val, &func](T v) {val += func(v); });
-			return val / this->Count();
-		}
-
-		template <typename _A = typename std::enable_if<std::is_arithmetic<T>::value>::type>
-		T Average() const
-		{
-			T val = T(0);
-			std::for_each(ref.begin(), ref.end(), [&val](T v) {val += v; });
-			return val / this->Count();
-		}
-
-		std::size_t Count() const
-		{
-			return ref.end() - ref.begin();
-		}
-
-		template <typename F, typename _A = typename std::enable_if<std::is_same<typename std::result_of<F(T)>::type, bool>::value>::type>
-		std::size_t Count(F func) const
-		{
-			return std::accumulate(ref.begin(), ref.end(), 0, [&func](int a, T val) {if (func(val)) { return ++a; } else return a; });
-		}
-
-		template <typename F, typename N = typename std::result_of<F(T)>::type, typename _A = typename std::enable_if<std::is_arithmetic<N>::value>::type>
-		N Max(F func) const
-		{
-			N val;
-			bool first = false;
-			std::for_each(ref.begin(), ref.end(), [&val, &first, &func](T v) {if (!first) { first = true; val = func(v); } else { val = std::max(val, func(v)); }});
-			return val;
-		}
-
-		template <typename _A = typename std::enable_if<std::is_arithmetic<T>::value>::type>
-		T Max() const
-		{
-			T val;
-			bool first = false;
-			std::for_each(ref.begin(), ref.end(), [&val, &first](T v) {if (!first) { first = true; val = v; } else { val = std::max(val, v); }});
-			return val;
-		}
-
-		template <typename F, typename N = typename std::result_of<F(T)>::type, typename _A = typename std::enable_if<std::is_arithmetic<N>::value>::type>
-		N Min(F func) const
-		{
-			N val;
-			bool first = false;
-			std::for_each(ref.begin(), ref.end(), [&val, &first, &func](T v) {if (!first) { first = true; val = func(v); } else { val = std::min(val, func(v)); }});
-			return val;
-		}
-
-		template <typename _A = typename std::enable_if<std::is_arithmetic<T>::value>::type>
-		T Min() const
-		{
-			T val;
-			bool first = false;
-			std::for_each(ref.begin(), ref.end(), [&val, &first](T v) {if (!first) { first = true; val = v; } else { val = std::min(val, v); }});
-			return val;
-		}
-
-		template <typename F, typename N = typename std::result_of<F(T)>::type, typename _A = typename std::enable_if<std::is_arithmetic<N>::value>::type>
-		N Sum(F func) const
-		{
-			N val = N(0);
-			std::for_each(ref.begin(), ref.end(), [&val, &func](T v) {val += func(v); });
-			return val;
-		}
-
-		template <typename _A = typename std::enable_if<std::is_arithmetic<T>::value>::type>
-		T Sum() const
-		{
-			T val = T(0);
-			std::for_each(ref.begin(), ref.end(), [&val](T v) {val += v; });
-			return val;
-		}
-
-		std::vector<T> ToVector() const
-		{
-			std::vector<T> ret;
-			std::for_each(ref.begin(), ref.end(), [&ret](T val) {ret.push_back(val); });
-			return ret;
-		}
-
-		std::list<T> ToList() const
-		{
-			std::list<T> ret;
-			std::for_each(ref.begin(), ref.end(), [&ret](T val) {ret.push_back(val); });
-			return ret;
-		}
-
-		std::forward_list<T> ToForwardList() const
-		{
-			std::forward_list<T> ret;
-			std::for_each(ref.begin(), ref.end(), [&ret](T val) {ret.push_back(val); });
-			return ret;
-		}
-
-		std::set<T> ToSet() const
-		{
-			std::set<T> ret;
-			std::for_each(ref.begin(), ref.end(), [&ret](T val) {ret.insert(val); });
-			return ret;
-		}
-
-		std::unordered_set<T> ToUnorderedSet() const
-		{
-			std::unordered_set<T> ret;
-			std::for_each(ref.begin(), ref.end(), [&ret](T val) {ret.insert(val); });
-			return ret;
-		}
-
-		template <typename F, typename K = typename std::result_of<F(T)>::type>
-		std::map<K, T> ToMap(F func) const
-		{
-			std::map<K, T> ret;
-			std::for_each(ref.begin(), ref.end(), [&ret, &func](T val) {ret[func(val)] = val; });
-			return ret;
-		}
-
-		template <typename F, typename K = typename std::result_of<F(T)>::type>
-		std::unordered_map<K, T> ToUnorderedMap(F func) const
-		{
-			std::unordered_map<K, T> ret;
-			std::for_each(ref.begin(), ref.end(), [&ret, &func](T val) {ret[func(val)] = val; });
-			return ret;
-		}
-
-		T ElementAt(int index) const
-		{
-			if (index < this->Count()) { return *(ref.begin() + index); }
-			else throw std::out_of_range("RefIEnumberable<T>::ElementAt(int index) | Index out of range.");
-		}
-
-		T ElementAtOrDefault(int index) const
-		{
-			if (index < this->Count()) { return *(ref.begin() + index); }
-			else return T();
-		}
-
-		T First() const
-		{
-			if (this->Any()) { return *ref.begin(); }
-			else throw std::length_error("RefIEnumberable<T>::First() | The collection referred to by the RefIEnumerable<T> is empty.");
-		}
-
-		template <typename F, typename _A = typename std::enable_if<std::is_same<typename std::result_of<F(T)>::type, bool>::value>::type>
-		T First(F func) const
-		{
-			auto v = std::find_if(ref.begin(), ref.end(), func);
-			if (v == ref.end())
-			{
-				throw std::length_error("RefIEnumberable<T>::First(F func) | No element satisfies the selection function.");
-			}
-			return *v;
-		}
-
-		T FirstOrDefault() const
-		{
-			if (this->Any()) { return *ref.begin(); }
-			else return T();
-		}
-
-		template <typename F, typename _A = typename std::enable_if<std::is_same<typename std::result_of<F(T)>::type, bool>::value>::type>
-		T FirstOrDefault(F func) const
-		{
-			auto v = std::find_if(ref.begin(), ref.end(), func);
-			if (v == ref.end())
-			{
-				return T();
-			}
-			return *v;
-		}
-
-		T Last() const
-		{
-			if (this->Any()) { return *(ref.rbegin()); }
-			else throw std::length_error("RefIEnumberable<T>::Last() | The collection referred to by the RefIEnumerable<T> is empty.");
-		}
-
-		template <typename F, typename _A = typename std::enable_if<std::is_same<typename std::result_of<F(T)>::type, bool>::value>::type>
-		T Last(F func) const
-		{
-			auto v = std::find_if(ref.rbegin(), ref.rend(), func);
-			if (v == ref.rend())
-			{
-				throw std::length_error("RefIEnumberable<T>::Last(F func) | No element satisfies the selection function.");
-			}
-			return *v;
-		}
-
-		T LastOrDefault() const
-		{
-			if (this->Any()) { return *(ref.rbegin()); }
-			else return T();
-		}
-
-		template <typename F, typename _A = typename std::enable_if<std::is_same<typename std::result_of<F(T)>::type, bool>::value>::type>
-		T LastOrDefault(F func) const
-		{
-			auto v = std::find_if(ref.rbegin(), ref.rend(), func);
-			if (v == ref.rend())
-			{
-				return T();
-			}
-			return *v;
-		}
-
-		T Single() const
-		{
-			if (this->Count() == 1) { return *(ref.begin()); }
-			else throw std::length_error("RefIEnumberable<T>::Single() | Size isn't exactly 1.");
-		}
-
-		template <typename F, typename _A = typename std::enable_if<std::is_same<typename std::result_of<F(T)>::type, bool>::value>::type>
-		T Single(F func) const
-		{
-			T retval;
-			int n = 0;
-
-			std::for_each(ref.begin(), ref.end(), [&retval, &func, &n](T val) 
-			{
-				if (func(val) == true) 
-				{ 
-					if (n == 0) { n++; retval = val; } 
-					else 
-					{ 
-						throw std::length_error("RefIEnumberable<T>::Single(F func) | More than 1 element matched the selection function.");
-					} 
-				}
-			});
-
-			if (n == 1) { return retval; }
-			throw std::length_error("RefIEnumberable<T>::Single(F func) | No elements matched the selection function.");
-		}
-
-		T SingleOrDefault() const
-		{
-			if (this->Count() == 1) { return *(ref.begin()); }
-			else if (this->Count() == 0) { return T(); }
-			else throw std::length_error("RefIEnumberable<T>::SingleOrDefault() | Size is bigger than 1.");
-		}
-
-		template <typename F, typename _A = typename std::enable_if<std::is_same<typename std::result_of<F(T)>::type, bool>::value>::type>
-		T SingleOrDefault(F func) const
-		{
-			T retval;
-			int n = 0;
-
-			std::for_each(ref.begin(), ref.end(), [&retval, &func, &n](T val) 
-			{
-				if (func(val) == true) 
-				{ 
-					if (n == 0) { n++; retval = val; }
-					else 
-					{ 
-						throw std::length_error("RefIEnumberable<T>::SingleOrDefault(F func) | More than 1 element matched the selection function.");
-					} 
-				}
-			});
-
-			if (n == 1) { return retval; }
-			else return T();
-		}
-
-		template <typename F, typename _A = typename std::enable_if<std::is_same<typename std::result_of<F(T)>::type, bool>::value>::type>
-		bool All(F func) const
-		{
-			return std::all_of(ref.begin(), ref.end(), func);
-		}
-
-		bool Any() const
-		{
-			return this->Count() > 0;
-		}
-
-		template <typename F, typename _A = typename std::enable_if<std::is_same<typename std::result_of<F(T)>::type, bool>::value>::type>
-		bool Any(F func) const
-		{
-			return std::any_of(ref.begin(), ref.end(), func);
-		}
-
-		bool Contains(T val) const
-		{
-			return std::find(ref.begin(), ref.end(), val) != ref.end();
-		}
 
 		IEnumerable<T> Copy()
 		{
-			return IEnumerable<T>(ref.begin(), ref.end());
+			IEnumerable<T> ret;
+			ret.reserve(this->size());
+			std::copy(this->begin(), this->end(), ret.begin());
+			return ret;
 		}
 
-	/*	template <typename _A1 = std::enable_if<std::is_same<Cont, std::vector<T>>::value>::type, typename _A2 = std::enable_if<!Const>::type>
-		IEnumerable<T> Consume()
-		{
-			return IEnumerable<T>(std::move(ref));
-		} */
-
-	private:
-		Cont& ref;
 	};
 
-	//typename ArgCont, typename IsRef = std::enable_if<std::is_lvalue_reference<ArgCount>::value>::type, typename Cont = std::decay<ArgCont>::type   
 	template <typename Cont, bool Const = std::is_const<Cont>::value, typename T = typename std::decay<decltype(*(std::declval<Cont>().begin()))>::type>
-	RefIEnumerable<Cont, Const, T> LINQ(Cont& cont)
+	IEnumerable<T, true, Cont, Const> LINQ(Cont& cont)
 	{
 		static_assert(std::is_same<decltype(*(std::declval<Cont>().begin())), decltype(*(std::declval<Cont>().end()))>::value, "Types of begin() and end() iterators must be the same.");
-		return RefIEnumerable<Cont, Const, T>(cont);
+		return IEnumerable<T, true, Cont, Const>(cont);
 	}
 
 
@@ -1142,8 +1251,6 @@ namespace cpplinq
 		std::for_each(cont.begin(), cont.end(), [&ret](T val) {ret.push_back(val); });
 		return ret;
 	}
-
-
 	
 	template <typename T>
 	IEnumerable<T> LINQ(std::vector<T>&& cont)
