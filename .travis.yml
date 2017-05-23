@@ -12,6 +12,7 @@ matrix:
           sources: ['ubuntu-toolchain-r-test']
           packages: ['g++-5']
       env: COMPILER=g++-5 CPPVERFLAG=-std=c++14 EXTRAARGS="-Weffc++ -fprofile-arcs -ftest-coverage -lgcov"
+	  after_success: "gcov-5 testing.cpp"
 
     - os: linux
       compiler: gcc
@@ -20,6 +21,7 @@ matrix:
           sources: ['ubuntu-toolchain-r-test']
           packages: ['g++-6']
       env: COMPILER=g++-6 CPPVERFLAG=-std=c++14 EXTRAARGS="-Weffc++ -fprofile-arcs -ftest-coverage -lgcov"
+	  after_success: "gcov-6 testing.cpp"
 
     - os: linux
       compiler: clang
@@ -52,12 +54,12 @@ matrix:
           sources: ['ubuntu-toolchain-r-test', 'llvm-toolchain-precise-3.9']
           packages: ['clang-3.9']
       env: COMPILER=clang++-3.9 CPPVERFLAG=-std=c++14 EXTRAARGS=""
+	  
 
 script:
 - cd ./CPPLINQ
 - make CXX=$COMPILER 
 - ./test
-- gcov testing.cpp
 
 after_success:
 - bash <(curl -s https://codecov.io/bash)
