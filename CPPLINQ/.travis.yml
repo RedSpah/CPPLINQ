@@ -31,10 +31,6 @@ matrix:
 
     - os: linux
       compiler: clang
-      env: COMPILER=clang++ CPPVERFLAG=-std=c++1y
-
-    - os: linux
-      compiler: clang
       addons:
         apt:
           sources: ['ubuntu-toolchain-r-test', 'llvm-toolchain-precise-3.6']

@@ -145,7 +145,7 @@ namespace cpplinq
 		struct pt_lambda
 		{
 			template <typename F, typename T, typename R = typename std::result_of<F(T)>::type>
-			static inline R ret(F& func, T& val, [[maybe_unused]] int n) { return func(val); }
+			static inline R ret(F& func, T& val, int n) { return func(val); }
 		};
 
 		template <>
