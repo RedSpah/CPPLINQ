@@ -102,7 +102,7 @@ namespace cpplinq
 			template<typename FF, typename... AA>
 			static constexpr std::false_type check(...) { return std::false_type(); };
 		public:
-			static constexpr bool value = decltype(check<F, Args...>(0))();
+			static constexpr bool value = decltype(check<F, Args...>(0))::value;
 		};
 
 		template <typename F, typename... A>
