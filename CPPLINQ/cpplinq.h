@@ -505,7 +505,7 @@ namespace cpplinq
 
 			int n = 0;
 
-			std::for_each(begin(), end(), [&ret, &func](T val)
+			std::for_each(begin(), end(), [&n, &ret, &func](T val)
 			{
 				RC rc = templ::pt_lambda<templ::is_counter_func_v<F, T>>::ret(func, val, n++);
 				std::copy(rc.begin(), rc.end(), std::back_inserter(ret));
@@ -533,7 +533,7 @@ namespace cpplinq
 
 			int n = 0;
 
-			std::for_each(begin(), end(), [&ret, &func, &result_selector](T val)
+			std::for_each(begin(), end(), [&n, &ret, &func, &result_selector](T val)
 			{
 				RC rc = templ::pt_lambda<templ::is_counter_func_v<F, T>>::ret(func, val, n++);
 				std::transform(rc.begin(), rc.end(), std::back_inserter(ret), [&result_selector, &val](RC_val rcval) {return result_selector(rcval, val); });
@@ -699,10 +699,10 @@ namespace cpplinq
 		>
 		IEnumerable<TJoined> GroupJoin(const IEnumerable<TInner, B0, C, B1>& innerkeys, FOuterKey outerkeyselector, FInnerKey innerkeyselector, FJoin joiner)
 		{
-			static_assert(!std::is_same<TKey, void>, "Passed outer key selector must have the following signature: TKey(T), where TKey is any type implementing operator== and operator!= and T is the type of the values contained within this container.");
+			static_assert(!std::is_same<TKey, void>::value, "Passed outer key selector must have the following signature: TKey(T), where TKey is any type implementing operator== and operator!= and T is the type of the values contained within this container.");
 			static_assert(!templ::is_comparable_v<TKey>, "The values returned by the outer key selector must implement operator== and operator!=.");
 			static_assert(templ::is_func_v<FInnerKey, TInner, TKey>, "Passed inner key selector must have the following signature: TKey(TInner), where TKey is the type returned by the outer key selector and TInner is the type of the values contained within the innerkeys container.");
-			static_assert(!std::is_same<TJoined, void>, "Passed joiner must have the following signature: TJoined(T, Iter<TInner>, Iter<TInner>), where TJoined is any type, T is the type of values contained within this container and Iter<TInner> is the type of an iterator to a collection of objects of type of the the type of the values contained within the innerkeys container.");
+			static_assert(!std::is_same<TJoined, void>::value, "Passed joiner must have the following signature: TJoined(T, Iter<TInner>, Iter<TInner>), where TJoined is any type, T is the type of values contained within this container and Iter<TInner> is the type of an iterator to a collection of objects of type of the the type of the values contained within the innerkeys container.");
 
 			IEnumerable<TJoined> ret;
 
@@ -1109,7 +1109,7 @@ namespace cpplinq
 		>
 		N Average(F func) const
 		{
-			static_assert(!is_same<N, void>::value, "Passed functor must have the following signature: N(T), where N is any arithmetic type.");
+			static_assert(!std::is_same<N, void>::value, "Passed functor must have the following signature: N(T), where N is any arithmetic type.");
 			static_assert(std::is_arithmetic<N>::value, "Passed functor must return an arithmetic type.");
 
 			if (this->size() == 0) { throw std::logic_error("IEnumerable<T>::Average(F func) | IEnumerable<T> is empty."); }
@@ -1148,7 +1148,7 @@ namespace cpplinq
 		>
 		N Max(F func) const
 		{
-			static_assert(!is_same<N, void>::value, "Passed functor must have the following signature: N(T), where N is any arithmetic type.");
+			static_assert(!std::is_same<N, void>::value, "Passed functor must have the following signature: N(T), where N is any arithmetic type.");
 			static_assert(std::is_arithmetic<N>::value, "Passed functor must return an arithmetic type.");
 
 			if (this->size() == 0) { throw std::logic_error("IEnumerable<T>::Max(F func) | IEnumerable<T> is empty."); }
@@ -1177,7 +1177,7 @@ namespace cpplinq
 		>		
 		N Min(F func) const
 		{
-			static_assert(!is_same<N, void>::value, "Passed functor must have the following signature: N(T), where N is any arithmetic type.");
+			static_assert(!std::is_same<N, void>::value, "Passed functor must have the following signature: N(T), where N is any arithmetic type.");
 			static_assert(std::is_arithmetic<N>::value, "Passed functor must return an arithmetic type.");
 
 			if (this->size() == 0) { throw std::logic_error("IEnumerable<T>::Min(F func) | IEnumerable<T> is empty."); }
@@ -1206,7 +1206,7 @@ namespace cpplinq
 		>			
 		N Sum(F func) const
 		{
-			static_assert(!is_same<N, void>::value, "Passed functor must have the following signature: N(T), where N is any arithmetic type.");
+			static_assert(std::!is_same<N, void>::value, "Passed functor must have the following signature: N(T), where N is any arithmetic type.");
 			static_assert(std::is_arithmetic<N>::value, "Passed functor must return an arithmetic type.");
 
 			N val = N(0);
