@@ -383,7 +383,7 @@ namespace cpplinq
 		// god forgive me
 		template <
 			alloc_mode MemMode = alloc_mode::no_alloc,
-			bool AllowAlloc = std::is_same<MemMode, alloc_mode::auto_alloc>::value,
+			bool AllowAlloc = (MemMode == alloc_mode::auto_alloc),
 			typename RetVal = typename std::conditional<IsRef && AllowAlloc, IEnumerable<T>, IEnumerable<T>&>::type,
 			typename F
 		>
@@ -1031,7 +1031,7 @@ namespace cpplinq
 
 		template <
 			alloc_mode MemMode = alloc_mode::no_alloc,
-			bool AllowAlloc = std::is_same<MemMode, alloc_mode::auto_alloc>::value,
+			bool AllowAlloc = (MemMode == alloc_mode::auto_alloc),
 			typename RetVal = typename std::conditional<IsRef && AllowAlloc, IEnumerable<T>, IEnumerable<T>&>::type, 
 			bool B0, typename C, bool B1
 		>
