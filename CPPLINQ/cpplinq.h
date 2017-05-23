@@ -20,15 +20,7 @@ namespace cpplinq
 	template <typename, bool, typename, bool>
 	struct IEnumerable;
 
-	struct std_hash {};
-
 	enum class alloc_mode : unsigned char {no_alloc, auto_alloc};
-
-	namespace mem
-	{ 
-		struct no_alloc {};
-		struct auto_alloc {};
-	}
 
 	namespace res
 	{
@@ -367,8 +359,8 @@ namespace cpplinq
 		}
 
 		template <
-			typename MemMode = mem::no_alloc, 
-			bool AllowAlloc = std::is_same<MemMode, mem::auto_alloc>::value, 
+			alloc_mode MemMode = alloc_mode::no_alloc, 
+			bool AllowAlloc = std::is_same<MemMode, alloc_mode::auto_alloc>::value,
 			typename RetVal = typename std::conditional<IsRef && AllowAlloc, IEnumerable<T>, IEnumerable<T>&>::type
 		>
 		RetVal Distinct()
@@ -398,8 +390,8 @@ namespace cpplinq
 
 		// god forgive me
 		template <
-			typename MemMode = mem::no_alloc,
-			bool AllowAlloc = std::is_same<MemMode, mem::auto_alloc>::value,
+			alloc_mode MemMode = alloc_mode::no_alloc,
+			bool AllowAlloc = std::is_same<MemMode, alloc_mode::auto_alloc>::value,
 			typename RetVal = typename std::conditional<IsRef && AllowAlloc, IEnumerable<T>, IEnumerable<T>&>::type,
 			typename F
 		>
@@ -545,8 +537,8 @@ namespace cpplinq
 		//		 PARTITIONING DATA
 
 		template <
-			typename MemMode = mem::no_alloc, 
-			bool AllowAlloc = std::is_same<MemMode, mem::auto_alloc>::value, 
+			alloc_mode MemMode = alloc_mode::no_alloc,
+			bool AllowAlloc = std::is_same<MemMode, alloc_mode::auto_alloc>::value,
 			typename RetVal = typename std::conditional<IsRef && AllowAlloc, IEnumerable<T>, IEnumerable<T>&>::type
 		>
 		RetVal Skip(int n)
@@ -568,8 +560,8 @@ namespace cpplinq
 		}
 
 		template <
-			typename MemMode = mem::no_alloc, 
-			bool AllowAlloc = std::is_same<MemMode, mem::auto_alloc>::value, 
+			alloc_mode MemMode = alloc_mode::no_alloc,
+			bool AllowAlloc = std::is_same<MemMode, alloc_mode::auto_alloc>::value,
 			typename RetVal = typename std::conditional<IsRef && AllowAlloc, IEnumerable<T>, IEnumerable<T>&>::type
 		>
 		RetVal Take(int n)
@@ -592,8 +584,8 @@ namespace cpplinq
 
 		// ordinary version
 		template <
-			typename MemMode = mem::no_alloc,
-			bool AllowAlloc = std::is_same<MemMode, mem::auto_alloc>::value, 
+			alloc_mode MemMode = alloc_mode::no_alloc,
+			bool AllowAlloc = std::is_same<MemMode, alloc_mode::auto_alloc>::value,
 			typename RetVal = typename std::conditional<IsRef && AllowAlloc, IEnumerable<T>, IEnumerable<T>&>::type, 
 			typename F
 		>
@@ -620,8 +612,8 @@ namespace cpplinq
 
 		// ordinary version
 		template <
-			typename MemMode = mem::no_alloc, 
-			bool AllowAlloc = std::is_same<MemMode, mem::auto_alloc>::value, 
+			alloc_mode MemMode = alloc_mode::no_alloc,
+			bool AllowAlloc = std::is_same<MemMode, alloc_mode::auto_alloc>::value,
 			typename RetVal = typename std::conditional<IsRef && AllowAlloc, IEnumerable<T>, IEnumerable<T>&>::type, 
 			typename F
 		>
@@ -731,8 +723,8 @@ namespace cpplinq
 		//		 GENERATION OPERATORS
 
 		template <
-			typename MemMode = mem::no_alloc, 
-			bool AllowAlloc = std::is_same<MemMode, mem::auto_alloc>::value,
+			alloc_mode MemMode = alloc_mode::no_alloc,
+			bool AllowAlloc = std::is_same<MemMode, alloc_mode::auto_alloc>::value,
 			typename RetVal = typename std::conditional<IsRef && AllowAlloc, IEnumerable<T>, IEnumerable<T>&>::type
 		>
 		RetVal DefaultIfEmpty()
@@ -755,8 +747,8 @@ namespace cpplinq
 		}
 
 		template <
-			typename MemMode = mem::no_alloc,
-			bool AllowAlloc = std::is_same<MemMode, mem::auto_alloc>::value, 
+			alloc_mode MemMode = alloc_mode::no_alloc,
+			bool AllowAlloc = std::is_same<MemMode, alloc_mode::auto_alloc>::value,
 			typename RetVal = typename std::conditional<IsRef && AllowAlloc, IEnumerable<T>, IEnumerable<T>&>::type
 		>
 		RetVal DefaultIfEmpty(T val)
@@ -1046,8 +1038,8 @@ namespace cpplinq
 		//		CONCATENATION OPERATORS
 
 		template <
-			typename MemMode = mem::no_alloc, 
-			bool AllowAlloc = std::is_same<MemMode, mem::auto_alloc>::value, 
+			alloc_mode MemMode = alloc_mode::no_alloc,
+			bool AllowAlloc = std::is_same<MemMode, alloc_mode::auto_alloc>::value,
 			typename RetVal = typename std::conditional<IsRef && AllowAlloc, IEnumerable<T>, IEnumerable<T>&>::type, 
 			bool B0, typename C, bool B1
 		>
