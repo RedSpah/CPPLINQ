@@ -145,7 +145,7 @@ namespace cpplinq
 		struct pt_lambda
 		{
 			template <typename F, typename T, typename R = typename std::result_of<F(T)>::type>
-			static inline R ret(F& func, T& val, int n) { return func(val); }
+			static inline R ret(F& func, T& val, [[maybe_unused]] int n) { return func(val); }
 		};
 
 		template <>
@@ -415,12 +415,12 @@ namespace cpplinq
 			{
 				IEnumerable<T> ret;
 				ret.reserve(size()); // RESERVE
-				std::copy_if(begin(), end(), std::back_inserter(ret), [&lam, &n, &func](T val) {return templ::pt_lambda<templ::is_counter_func_v<F, T>>::ret(func, val, n++); });
+				std::copy_if(begin(), end(), std::back_inserter(ret), [&n, &func](T val) {return templ::pt_lambda<templ::is_counter_func_v<F, T>>::ret(func, val, n++); });
 				return ret;
 			}
 			else
 			{
-				erase(std::copy_if(begin(), end(), begin(), [&lam, &n, &func](T val) {return templ::pt_lambda<templ::is_counter_func_v<F, T>>::ret(func, val, n++); }), end());
+				erase(std::copy_if(begin(), end(), begin(), [&n, &func](T val) {return templ::pt_lambda<templ::is_counter_func_v<F, T>>::ret(func, val, n++); }), end());
 				return *this;
 			}
 		}
@@ -469,7 +469,7 @@ namespace cpplinq
 
 			IEnumerable<R> ret;
 			ret.reserve(size()); // RESERVE, UNCHANGABLE
-			std::transform(begin(), end(), std::back_inserter(ret), [&lam, &n, &func](T val) {return templ::pt_lambda<templ::is_counter_func_v<F, T>>::ret(func, val, n++); });
+			std::transform(begin(), end(), std::back_inserter(ret), [&n, &func](T val) {return templ::pt_lambda<templ::is_counter_func_v<F, T>>::ret(func, val, n++); });
 			return ret;			
 		}
 		
@@ -484,7 +484,7 @@ namespace cpplinq
 
 			int n = 0;
 
-			std::transform(begin(), end(), begin(), [&lam, &n, &func](T val) {return templ::pt_lambda<templ::is_counter_func_v<F, T>>::ret(func, val, n++); });
+			std::transform(begin(), end(), begin(), [&n, &func](T val) {return templ::pt_lambda<templ::is_counter_func_v<F, T>>::ret(func, val, n++); });
 			return *this;
 		}
 
@@ -507,7 +507,7 @@ namespace cpplinq
 
 			std::for_each(begin(), end(), [&ret, &func](T val)
 			{
-				RC rc = templ::pt_lambda<templ::is_counter_func_v<F, T>::value>::ret(func, val, n++);
+				RC rc = templ::pt_lambda<templ::is_counter_func_v<F, T>>::ret(func, val, n++);
 				std::copy(rc.begin(), rc.end(), std::back_inserter(ret));
 			});
 
@@ -533,10 +533,10 @@ namespace cpplinq
 
 			int n = 0;
 
-			std::for_each(begin(), end(), [&ret, &func](T val)
+			std::for_each(begin(), end(), [&ret, &func, &result_selector](T val)
 			{
-				RC rc = templ::pt_lambda<templ::is_counter_func_v<F, T>::value>::ret(func, val, n++);
-				std::transform(rc.begin(), rc.end(), std::back_inserter(ret), [&val](RC_val rcval) {return result_selector(rcval, val); });
+				RC rc = templ::pt_lambda<templ::is_counter_func_v<F, T>>::ret(func, val, n++);
+				std::transform(rc.begin(), rc.end(), std::back_inserter(ret), [&result_selector, &val](RC_val rcval) {return result_selector(rcval, val); });
 			});
 
 			return ret;
@@ -663,22 +663,22 @@ namespace cpplinq
 		>
 		IEnumerable<TJoined> Join(const IEnumerable<TInner, B0, C, B1>& innerkeys, FOuterKey outerkeyselector, FInnerKey innerkeyselector, FJoin joiner)
 		{
-			static_assert(!std::is_same<TKey, void>, "Passed outer key selector must have the following signature: TKey(T), where TKey is any type implementing operator== and operator!= and T is the type of the values contained within this container.");
+			static_assert(!std::is_same<TKey, void>::value, "Passed outer key selector must have the following signature: TKey(T), where TKey is any type implementing operator== and operator!= and T is the type of the values contained within this container.");
 			static_assert(!templ::is_comparable_v<TKey>, "The values returned by the outer key selector must implement operator== and operator!=.");
-			static_assert(templ::is_func_v<FInnerKey, TInner, TKey>, "Passed inner key selector must have the following signature: TKey(TInner), where TKey is the type returned by the outer key selector and TInner is the type of the values contained within the innerkeys container.");
-			static_assert(!std::is_same<TJoined, void>, "Passed joiner must have the following signature: TJoined(T, TInner), where TJoined is any type, T is the type of values contained within this container and TInner is the type of the values contained within the innerkeys container.");
+			static_assert(templ::is_func_v<FInnerKey, TKey, TInner>, "Passed inner key selector must have the following signature: TKey(TInner), where TKey is the type returned by the outer key selector and TInner is the type of the values contained within the innerkeys container.");
+			static_assert(!std::is_same<TJoined, void>::value, "Passed joiner must have the following signature: TJoined(T, TInner), where TJoined is any type, T is the type of values contained within this container and TInner is the type of the values contained within the innerkeys container.");
 
 			IEnumerable<TJoined> ret; 
 
-			std::vector<std::pair<TKey, TValue>> innervals;
+			std::vector<std::pair<TKey, TInner>> innervals;
 			innervals.reserve(size()); // RESERVE unchangable
 			ret.reserve(size()); // RESERVE
 			
 			std::for_each(innerkeys.begin(), innerkeys.end(), [&innervals, &innerkeyselector](TInner innerval) {innervals.push_back(std::make_pair(innerkeyselector(innerval), innerval)); });
-			std::for_each(begin(), end(), [&innervals, &outerkeyselector, &joiner, &ret](TOuter outerval)
+			std::for_each(begin(), end(), [&innervals, &outerkeyselector, &joiner, &ret](T outerval)
 			{
 				TKey key = outerkeyselector(outerval);
-				auto iter = std::find_if(innervals.begin(), innervals.end(), [&key](std::pair<TKey, TValue> p) {return key == p.first; });
+				auto iter = std::find_if(innervals.begin(), innervals.end(), [&key](std::pair<TKey, TInner> p) {return key == p.first; });
 
 				if (iter != innervals.end())
 				{
@@ -699,8 +699,6 @@ namespace cpplinq
 		>
 		IEnumerable<TJoined> GroupJoin(const IEnumerable<TInner, B0, C, B1>& innerkeys, FOuterKey outerkeyselector, FInnerKey innerkeyselector, FJoin joiner)
 		{
-
-
 			static_assert(!std::is_same<TKey, void>, "Passed outer key selector must have the following signature: TKey(T), where TKey is any type implementing operator== and operator!= and T is the type of the values contained within this container.");
 			static_assert(!templ::is_comparable_v<TKey>, "The values returned by the outer key selector must implement operator== and operator!=.");
 			static_assert(templ::is_func_v<FInnerKey, TInner, TKey>, "Passed inner key selector must have the following signature: TKey(TInner), where TKey is the type returned by the outer key selector and TInner is the type of the values contained within the innerkeys container.");
@@ -713,7 +711,7 @@ namespace cpplinq
 			innervals.reserve(size()); // RESERVE
 
 			std::for_each(innerkeys.begin(), innerkeys.end(), [&innervals, &innerkeyselector](TInner innerval) {innervals.push_back(std::make_pair(innerkeyselector(innerval), innerval)); });
-			std::for_each(begin(), end(), [&innervals, &outerkeyselector, &joiner, &ret](TOuter outerval)
+			std::for_each(begin(), end(), [&innervals, &outerkeyselector, &joiner, &ret](T outerval)
 			{
 				TKey key = outerkeyselector(outerval);
 				std::vector<TInner> block;
@@ -1100,7 +1098,7 @@ namespace cpplinq
 		E Aggregate(V val, F func, R retfunc) const
 		{
 			static_assert(templ::is_func_v<F, V, V, T>, "Passed functor must have the following signature: V(V, T), where V is any type.");
-			static_assert(!std::is_same<E, void>, "Passed return functor must have the following signature: E(V), where E is any type and V is the type returned by the accumulating functor.");
+			static_assert(!std::is_same<E, void>::value, "Passed return functor must have the following signature: E(V), where E is any type and V is the type returned by the accumulating functor.");
 
 			return retfunc(std::accumulate(this->begin(), this->end(), val, func));
 		}
@@ -1111,7 +1109,7 @@ namespace cpplinq
 		>
 		N Average(F func) const
 		{
-			static_assert(!is_same<N, void>, "Passed functor must have the following signature: N(T), where N is any arithmetic type.");
+			static_assert(!is_same<N, void>::value, "Passed functor must have the following signature: N(T), where N is any arithmetic type.");
 			static_assert(std::is_arithmetic<N>::value, "Passed functor must return an arithmetic type.");
 
 			if (this->size() == 0) { throw std::logic_error("IEnumerable<T>::Average(F func) | IEnumerable<T> is empty."); }
@@ -1150,7 +1148,7 @@ namespace cpplinq
 		>
 		N Max(F func) const
 		{
-			static_assert(!is_same<N, void>, "Passed functor must have the following signature: N(T), where N is any arithmetic type.");
+			static_assert(!is_same<N, void>::value, "Passed functor must have the following signature: N(T), where N is any arithmetic type.");
 			static_assert(std::is_arithmetic<N>::value, "Passed functor must return an arithmetic type.");
 
 			if (this->size() == 0) { throw std::logic_error("IEnumerable<T>::Max(F func) | IEnumerable<T> is empty."); }
@@ -1179,7 +1177,7 @@ namespace cpplinq
 		>		
 		N Min(F func) const
 		{
-			static_assert(!is_same<N, void>, "Passed functor must have the following signature: N(T), where N is any arithmetic type.");
+			static_assert(!is_same<N, void>::value, "Passed functor must have the following signature: N(T), where N is any arithmetic type.");
 			static_assert(std::is_arithmetic<N>::value, "Passed functor must return an arithmetic type.");
 
 			if (this->size() == 0) { throw std::logic_error("IEnumerable<T>::Min(F func) | IEnumerable<T> is empty."); }
@@ -1208,7 +1206,7 @@ namespace cpplinq
 		>			
 		N Sum(F func) const
 		{
-			static_assert(!is_same<N, void>, "Passed functor must have the following signature: N(T), where N is any arithmetic type.");
+			static_assert(!is_same<N, void>::value, "Passed functor must have the following signature: N(T), where N is any arithmetic type.");
 			static_assert(std::is_arithmetic<N>::value, "Passed functor must return an arithmetic type.");
 
 			N val = N(0);
