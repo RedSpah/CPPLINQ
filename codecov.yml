@@ -1,2 +1,2 @@
 ignore:
-- "*.hpp.gcov" # to block catch.hpp
+- "*catch.hpp*" # to block catch.hpp

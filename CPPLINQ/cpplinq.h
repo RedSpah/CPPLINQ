@@ -148,7 +148,7 @@ namespace cpplinq
 		Cont& refcont__;
 
 	public:
-		using VectorIterType = decltype(std::declval<std::vector<T>>().begin());  
+		using VectorIterType = decltype(std::declval<std::vector<T>>().begin());   
 		using ContIterType = decltype(std::declval<Cont>().begin());
 
 		template <bool Workaround = true, typename SFINAE_GUARD = typename std::enable_if<Workaround && !IsRef>::type>
