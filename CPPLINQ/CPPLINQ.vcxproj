@@ -78,7 +78,8 @@
     </ClCompile>
     <PostBuildEvent>
       <Command>copy "$(ProjectDir).travis.yml" "$(ProjectDir).."
-copy "$(ProjectDir)makefile" "$(ProjectDir).."</Command>
+copy "$(ProjectDir)makefile" "$(ProjectDir).."
+copy "$(ProjectDir)codecov.yml" "$(ProjectDir).."</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -124,6 +125,7 @@ copy "$(ProjectDir)makefile" "$(ProjectDir).."</Command>
     </None>
   </ItemGroup>
   <ItemGroup>
+    <None Include="codecov.yml" />
     <None Include="makefile">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <FileType>CppCode</FileType>
