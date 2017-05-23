@@ -145,7 +145,7 @@ namespace cpplinq
 		struct pt_lambda
 		{
 			template <typename F, typename T, typename R = typename std::result_of<F(T)>::type>
-			static inline R ret(F& func, T& val, int n) { return func(val); }
+			static inline R ret(F& func, T& val, int n) { ++n; return func(val); }
 		};
 
 		template <>
@@ -814,7 +814,7 @@ namespace cpplinq
 		{
 			static_assert(templ::is_comparable_v<T>, "Type of the contained values must implement operator== and operator!=.");
 
-			return std::equal(begin(), end(), begin());
+			return std::equal(begin(), end(), other.begin());
 		}
 
 		//		 ELEMENT OPERATORS
@@ -1206,7 +1206,7 @@ namespace cpplinq
 		>			
 		N Sum(F func) const
 		{
-			static_assert(std::!is_same<N, void>::value, "Passed functor must have the following signature: N(T), where N is any arithmetic type.");
+			static_assert(!std::is_same<N, void>::value, "Passed functor must have the following signature: N(T), where N is any arithmetic type.");
 			static_assert(std::is_arithmetic<N>::value, "Passed functor must return an arithmetic type.");
 
 			N val = N(0);
