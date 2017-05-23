@@ -123,7 +123,7 @@ namespace cpplinq
 		struct is_func_impl : std::false_type {};
 
 		template <typename F, typename  R, typename... A>
-		struct is_func_impl<F, R, true, A...> : std::integral_constant<bool, std::is_same<std::result_of_t<F(A...)>, R>::value> {};
+		struct is_func_impl<F, R, true, A...> : std::integral_constant<bool, std::is_same<std::result_of<F(A...)>::type, R>::value> {};
 
 		template <typename F, typename R, typename... A>
 		constexpr auto is_func_v = is_func_impl<F, R, is_defined_v<F, A...>, A...>::value;
