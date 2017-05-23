@@ -38,14 +38,6 @@ namespace cpplinq
 
 	namespace templ
 	{
-		struct none 
-		{
-			template <typename T>
-			operator T() { return T(); }
-		};
-
-		struct any_type {};
-
 		template<class ...> using void_t = void;
 
 		template <class = void, class = void>
@@ -360,7 +352,7 @@ namespace cpplinq
 
 		template <
 			alloc_mode MemMode = alloc_mode::no_alloc, 
-			bool AllowAlloc = std::is_same<MemMode, alloc_mode::auto_alloc>::value,
+			bool AllowAlloc = (MemMode == alloc_mode::auto_alloc),
 			typename RetVal = typename std::conditional<IsRef && AllowAlloc, IEnumerable<T>, IEnumerable<T>&>::type
 		>
 		RetVal Distinct()
@@ -538,7 +530,7 @@ namespace cpplinq
 
 		template <
 			alloc_mode MemMode = alloc_mode::no_alloc,
-			bool AllowAlloc = std::is_same<MemMode, alloc_mode::auto_alloc>::value,
+			bool AllowAlloc = (MemMode == alloc_mode::auto_alloc),
 			typename RetVal = typename std::conditional<IsRef && AllowAlloc, IEnumerable<T>, IEnumerable<T>&>::type
 		>
 		RetVal Skip(int n)
@@ -561,7 +553,7 @@ namespace cpplinq
 
 		template <
 			alloc_mode MemMode = alloc_mode::no_alloc,
-			bool AllowAlloc = std::is_same<MemMode, alloc_mode::auto_alloc>::value,
+			bool AllowAlloc = (MemMode == alloc_mode::auto_alloc),
 			typename RetVal = typename std::conditional<IsRef && AllowAlloc, IEnumerable<T>, IEnumerable<T>&>::type
 		>
 		RetVal Take(int n)
@@ -585,7 +577,7 @@ namespace cpplinq
 		// ordinary version
 		template <
 			alloc_mode MemMode = alloc_mode::no_alloc,
-			bool AllowAlloc = std::is_same<MemMode, alloc_mode::auto_alloc>::value,
+			bool AllowAlloc = (MemMode == alloc_mode::auto_alloc),
 			typename RetVal = typename std::conditional<IsRef && AllowAlloc, IEnumerable<T>, IEnumerable<T>&>::type, 
 			typename F
 		>
@@ -613,7 +605,7 @@ namespace cpplinq
 		// ordinary version
 		template <
 			alloc_mode MemMode = alloc_mode::no_alloc,
-			bool AllowAlloc = std::is_same<MemMode, alloc_mode::auto_alloc>::value,
+			bool AllowAlloc = (MemMode == alloc_mode::auto_alloc),
 			typename RetVal = typename std::conditional<IsRef && AllowAlloc, IEnumerable<T>, IEnumerable<T>&>::type, 
 			typename F
 		>
@@ -724,7 +716,7 @@ namespace cpplinq
 
 		template <
 			alloc_mode MemMode = alloc_mode::no_alloc,
-			bool AllowAlloc = std::is_same<MemMode, alloc_mode::auto_alloc>::value,
+			bool AllowAlloc = (MemMode == alloc_mode::auto_alloc),
 			typename RetVal = typename std::conditional<IsRef && AllowAlloc, IEnumerable<T>, IEnumerable<T>&>::type
 		>
 		RetVal DefaultIfEmpty()
@@ -748,7 +740,7 @@ namespace cpplinq
 
 		template <
 			alloc_mode MemMode = alloc_mode::no_alloc,
-			bool AllowAlloc = std::is_same<MemMode, alloc_mode::auto_alloc>::value,
+			bool AllowAlloc = (MemMode == alloc_mode::auto_alloc),
 			typename RetVal = typename std::conditional<IsRef && AllowAlloc, IEnumerable<T>, IEnumerable<T>&>::type
 		>
 		RetVal DefaultIfEmpty(T val)
