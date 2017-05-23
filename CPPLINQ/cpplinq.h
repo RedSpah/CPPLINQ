@@ -1027,7 +1027,7 @@ namespace cpplinq
 			return ret;
 		}
 
-		//		CONCATENATION OPERATORS 
+		//		CONCATENATION OPERATORS  
 
 		template <
 			alloc_mode MemMode = alloc_mode::no_alloc,
