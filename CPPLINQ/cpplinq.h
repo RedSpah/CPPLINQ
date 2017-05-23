@@ -151,25 +151,25 @@ namespace cpplinq
 		using VectorIterType = typename decltype(std::declval<std::vector<T>>().begin());
 		using ContIterType = typename decltype(std::declval<Cont>().begin());
 
-		template <typename SFINAE_GUARD = typename std::enable_if<!IsRef>::type>
+		template <typename SFINAE_GUARD = typename std::enable_if<(sizeof(T),!IsRef)>::type>
 		inline VectorIterType begin() 
 		{
 			return std::vector<T>::begin();
 		}
 
-		template <typename SFINAE_GUARD = typename std::enable_if<IsRef>::type, typename = void>
+		template <typename SFINAE_GUARD = typename std::enable_if<(sizeof(T), IsRef)>::type, typename = void>
 		inline ContIterType begin() 
 		{
 			return refcont__.begin(); 
 		}
 
-		template <typename SFINAE_GUARD = typename std::enable_if<!IsRef>::type>
+		template <typename SFINAE_GUARD = typename std::enable_if<(sizeof(T), !IsRef)>::type>
 		inline VectorIterType end() 
 		{
 			return std::vector<T>::end();
 		}
 
-		template <typename SFINAE_GUARD = typename std::enable_if<IsRef>::type, typename = void>
+		template <typename SFINAE_GUARD = typename std::enable_if<(sizeof(T), IsRef)>::type, typename = void>
 		inline ContIterType end() 
 		{
 			return refcont__.end();
@@ -976,7 +976,7 @@ namespace cpplinq
 			return ret;
 		}
 
-		template <typename SFINAE_GUARD = typename std::enable_if<IsRef == false>::type>
+		template <typename SFINAE_GUARD = typename std::enable_if<(sizeof(T), !IsRef)>::type>
 		std::vector<T> ToVectorConsume()
 		{
 			return std::vector<T>(std::move(*this));
