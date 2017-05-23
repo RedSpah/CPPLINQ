@@ -97,13 +97,12 @@ namespace cpplinq
 		struct is_valid_call {
 		private:
 			template<typename FF, typename... AA>
-			static constexpr auto check(int) ->
-				decltype(std::declval<FF>()(std::declval<AA>()...), std::true_type());
+			static constexpr auto check(int) -> decltype(std::declval<FF>()(std::declval<AA>()...), std::true_type()) {return std::true_type();};
 
 			template<typename FF, typename... AA>
-			static constexpr std::false_type check(...);
+			static constexpr std::false_type check(...) { return std::false_type(); };
 		public:
-			static constexpr bool value = decltype(check<F, Args...>(0)){};
+			static constexpr bool value = decltype(check<F, Args...>(0))();
 		};
 
 		template <typename F, typename... A>
