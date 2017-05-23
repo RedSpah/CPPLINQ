@@ -135,7 +135,7 @@ namespace cpplinq
 		constexpr bool is_filter_v = is_func_v<F, bool, A> || is_func_v<F, bool, A, std::size_t>;
 
 		template <typename F, typename A>
-		using safe_result_of_t = typename std::conditional<is_counter_func_v<F, A>, typename sanitizer_t<F, A, int>, typename sanitizer_t<F, A>>::type;
+		using safe_result_of_t = typename std::conditional<is_counter_func_v<F, A>, sanitizer_t<F, A, int>, sanitizer_t<F, A>>::type;
 
 		constexpr bool lol = false;
 
@@ -203,7 +203,7 @@ namespace cpplinq
 
 		// Because of complexity of implementing all the boilerplate required to implement 'ThenBy' faithfully, I opted for overloading 'OrderBy' and 'OrderByDesending' to allow for multiple V->K functions, which work just like applying ThenBy to the 'normal' OrderBy 
 
-		template <typename F1, typename K1 = typename templ::ret_type<F(T)>>
+		template <typename F1, typename K1 = typename templ::ret_type<F1(T)>>
 		IEnumerable<T, IsRef, Cont>& OrderBy(F1 func1)
 		{
 			static_assert(templ::is_sortable<K1>::value, "Values of the return type of the passed functor must define greater-than and less-than operators.");
