@@ -11,7 +11,7 @@ matrix:
         apt:
           sources: ['ubuntu-toolchain-r-test']
           packages: ['g++-5']
-      env: COMPILER=g++-5 CPPVERFLAG=-std=c++14
+      env: COMPILER=g++-5 CPPVERFLAG=-std=c++14 EXTRAARGS="-Weffc++ -fprofile-arcs -ftest-coverage -lgcov"
 
     - os: linux
       compiler: gcc
@@ -19,7 +19,7 @@ matrix:
         apt:
           sources: ['ubuntu-toolchain-r-test']
           packages: ['g++-6']
-      env: COMPILER=g++-6 CPPVERFLAG=-std=c++14
+      env: COMPILER=g++-6 CPPVERFLAG=-std=c++14 EXTRAARGS="-Weffc++ -fprofile-arcs -ftest-coverage -lgcov"
 
     - os: linux
       compiler: clang
@@ -27,7 +27,7 @@ matrix:
         apt:
           sources: ['ubuntu-toolchain-r-test', 'llvm-toolchain-precise-3.6']
           packages: ['clang-3.6']
-      env: COMPILER=clang++-3.6 CPPVERFLAG=-std=c++14
+      env: COMPILER=clang++-3.6 CPPVERFLAG=-std=c++14 EXTRAARGS=""
 
     - os: linux
       compiler: clang
@@ -35,7 +35,7 @@ matrix:
         apt:
           sources: ['ubuntu-toolchain-r-test', 'llvm-toolchain-precise-3.7']
           packages: ['clang-3.7']
-      env: COMPILER=clang++-3.7 CPPVERFLAG=-std=c++14
+      env: COMPILER=clang++-3.7 CPPVERFLAG=-std=c++14 EXTRAARGS=""
 
     - os: linux
       compiler: clang
@@ -43,7 +43,7 @@ matrix:
         apt:
           sources: ['ubuntu-toolchain-r-test', 'llvm-toolchain-precise-3.8']
           packages: ['clang-3.8']
-      env: COMPILER=clang++-3.8 CPPVERFLAG=-std=c++14
+      env: COMPILER=clang++-3.8 CPPVERFLAG=-std=c++14 EXTRAARGS=""
 
     - os: linux
       compiler: clang
@@ -51,7 +51,7 @@ matrix:
         apt:
           sources: ['ubuntu-toolchain-r-test', 'llvm-toolchain-precise-3.9']
           packages: ['clang-3.9']
-      env: COMPILER=clang++-3.9 CPPVERFLAG=-std=c++14
+      env: COMPILER=clang++-3.9 CPPVERFLAG=-std=c++14 EXTRAARGS=""
 
 script:
 - cd ./CPPLINQ
