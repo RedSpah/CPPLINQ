@@ -1,23 +1,33 @@
+#define CATCH_CONFIG_MAIN
 #include "cpplinq.h"
-#include <iostream>
+#include "catch.hpp"
 
-int main()
+using namespace cpplinq;
+
+TEST_CASE("IEnumerable constuction", "[IEnumerable]")
 {
-	using namespace cpplinq::templ;
+	std::vector<int> test_vector_copy = { 1, 2, 3, 4, 5 };
+	std::vector<int> test_vector_move = { 1, 2, 3, 4, 5 };
+	std::forward_list<int> test_list_move = { 1, 2, 3, 4, 5 };
 
-	std::vector<int> TestVector = {0, 1, 2, 3, 4, 5, 7, 9, 11};
-	std::forward_list<int> TestList = {0, 1, 2, 3, 4, 5};
-	auto refienum_test = cpplinq::LINQ(TestVector);
-	auto movienum_test = cpplinq::LINQ(std::move(TestList));
+	SECTION("Constructing by copy")
+	{
+		auto copy_ienumerable = LINQ(test_vector_copy);
 
-	auto l = [](int i) {return i < 2; };
-
-	constexpr bool sas = is_defined_v<decltype(l), int>;
-
-	constexpr bool vv = is_func_v<decltype(l), bool, int>;
-
+		REQUIRE(copy_ienumerable.ToVector() == test_vector_copy);
+	}
 	
-	constexpr bool b = is_counter_func_v<decltype(l), int>;
+	SECTION("Constructing by move of vector")
+	{
+		auto vec_move_ienumerable = LINQ(std::move(test_vector_move));
 
-	return 0;
+		REQUIRE(vec_move_ienumerable.ToVector() == test_vector_copy);
+	}
+
+	SECTION("Constructing by move of other container")
+	{
+		auto cont_move_ienumerable = LINQ(std::move(test_list_move));
+
+		REQUIRE(cont_move_ienumerable.ToVector() == test_vector_copy);
+	}
 }

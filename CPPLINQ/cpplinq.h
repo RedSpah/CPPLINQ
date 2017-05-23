@@ -144,26 +144,38 @@ namespace cpplinq
 	struct IEnumerable : public std::vector<T>
 	{
 	private:
-		using VectorIterType = decltype(std::declval<std::vector<T>>().begin());
-		using ContIterType = decltype(std::declval<Cont>().begin());
+		
 		Cont& refcont__;
 
 	public:
-		template <typename RetIter = typename std::conditional<IsRef, ContIterType, VectorIterType>::type>
-		inline RetIter begin() 
+		using VectorIterType = typename decltype(std::declval<std::vector<T>>().begin());
+		using ContIterType = typename decltype(std::declval<Cont>().begin());
+
+		template <typename SFINAE_GUARD = typename std::enable_if<!IsRef>::type>
+		inline VectorIterType begin() 
 		{
-			if (IsRef) { return refcont__.begin(); }
-			else return std::vector<T>::begin();
+			return std::vector<T>::begin();
 		}
 
-		template <typename RetIter = typename std::conditional<IsRef, ContIterType, VectorIterType>::type>
-		inline RetIter end() 
+		template <typename SFINAE_GUARD = typename std::enable_if<IsRef>::type, typename = void>
+		inline ContIterType begin() 
 		{
-			if (IsRef) { return refcont__.end(); }
-			else return std::vector<T>::end();
+			return refcont__.begin(); 
 		}
 
-		inline std::size_t size()
+		template <typename SFINAE_GUARD = typename std::enable_if<!IsRef>::type>
+		inline VectorIterType end() 
+		{
+			return std::vector<T>::end();
+		}
+
+		template <typename SFINAE_GUARD = typename std::enable_if<IsRef>::type, typename = void>
+		inline ContIterType end() 
+		{
+			return refcont__.end();
+		}
+
+		inline std::size_t size() 
 		{
 			if (IsRef) { return std::distance(begin(), end()); }
 			else return std::vector<T>::size();
@@ -964,20 +976,22 @@ namespace cpplinq
 			return ret;
 		}
 
-		std::vector<T> ToVector()
+		template <typename SFINAE_GUARD = typename std::enable_if<IsRef == false>::type>
+		std::vector<T> ToVectorConsume()
 		{
 			return std::vector<T>(std::move(*this));
 		}
 
-		std::vector<T> ToVectorNotConsume() const
+		std::vector<T> ToVector() 
 		{
 			std::vector<T> ret;
-			ret.reserve(this->size()); // RESERVE
-			std::for_each(this->begin(), this->end(), [&ret](T val) {ret.push_back(val); });
+			//std::size_t n = size();
+			ret.reserve(size()); // RESERVE
+			std::copy(begin(), end(), std::back_inserter(ret));
 			return ret;
 		}
 
-		std::list<T> ToList() const
+		std::list<T> ToList() 
 		{
 			std::list<T> ret;
 			ret.reserve(this->size()); // RESERVE
@@ -985,7 +999,7 @@ namespace cpplinq
 			return ret;
 		}
 
-		std::forward_list<T> ToForwardList() const
+		std::forward_list<T> ToForwardList() 
 		{
 			std::forward_list<T> ret;
 			ret.reserve(this->size()); // RESERVE
@@ -993,7 +1007,7 @@ namespace cpplinq
 			return ret;
 		}
 
-		std::set<T> ToSet() const
+		std::set<T> ToSet() 
 		{
 			std::set<T> ret;
 			ret.reserve(this->size()); // RESERVE
@@ -1001,7 +1015,7 @@ namespace cpplinq
 			return ret;
 		}
 
-		std::unordered_set<T> ToUnorderedSet() const
+		std::unordered_set<T> ToUnorderedSet() 
 		{
 			std::unordered_set<T> ret;
 			ret.reserve(this->size()); // RESERVE
@@ -1010,7 +1024,7 @@ namespace cpplinq
 		}
 
 		template <typename F, typename K = typename std::result_of<F(T)>::type>
-		std::map<K, T> ToMap(F func) const
+		std::map<K, T> ToMap(F func) 
 		{
 			std::map<K, T> ret;
 			ret.reserve(this->size()); // RESERVE
@@ -1019,7 +1033,7 @@ namespace cpplinq
 		}
 
 		template <typename F, typename K = typename std::result_of<F(T)>::type>
-		std::unordered_map<K, T> ToUnorderedMap(F func) const
+		std::unordered_map<K, T> ToUnorderedMap(F func) 
 		{
 			std::unordered_map<K, T> ret;
 			ret.reserve(this->size()); // RESERVE

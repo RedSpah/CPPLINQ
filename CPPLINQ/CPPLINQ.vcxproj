@@ -115,6 +115,7 @@ copy "$(ProjectDir)makefile" "$(ProjectDir).."</Command>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="catch.hpp" />
     <ClInclude Include="cpplinq.h" />
   </ItemGroup>
   <ItemGroup>

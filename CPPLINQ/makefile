@@ -1,3 +1,7 @@
+OBJ = testing.o 
 
-cpplinqmake: testing.cpp
-	$(CXX) -o test testing.cpp -I. -Wall -Wextra  $(CPPVERFLAG) $(EXTRAARGS)
+%.o: %.cpp 
+	$(CXX) -c -o $@ $< $(CPPVERFLAG) $(EXTRAARGS)
+
+cpplinqmake: $(OBJ)
+	$(CXX) -o test $^ -I. -Wall -Wextra  $(CPPVERFLAG) $(EXTRAARGS) $(LIBS)
