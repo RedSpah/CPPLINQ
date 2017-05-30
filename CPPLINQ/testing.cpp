@@ -14,20 +14,20 @@ TEST_CASE("IEnumerable constuction", "[IEnumerable]")
 	{
 		auto copy_ienumerable = LINQ(test_vector_copy);
 
-		REQUIRE(copy_ienumerable.ToVector() == test_vector_copy);
+		REQUIRE(copy_ienumerable.to_vector() == test_vector_copy);
 	}
 	
 	SECTION("Constructing by move of vector")
 	{
 		auto vec_move_ienumerable = LINQ(std::move(test_vector_move));
 
-		REQUIRE(vec_move_ienumerable.ToVector() == test_vector_copy);
+		REQUIRE(vec_move_ienumerable.to_vector() == test_vector_copy);
 	}
 
 	SECTION("Constructing by move of other container")
 	{
 		auto cont_move_ienumerable = LINQ(std::move(test_list_move));
 
-		REQUIRE(cont_move_ienumerable.ToVector() == test_vector_copy);
+		REQUIRE(cont_move_ienumerable.to_vector() == test_vector_copy);
 	}
 }

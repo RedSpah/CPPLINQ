@@ -413,17 +413,17 @@ namespace Catch {
         void trueValue() const {}
     };
 
-    template<typename ContainerT>
-    inline void deleteAll( ContainerT& container ) {
-        typename ContainerT::const_iterator it = container.begin();
-        typename ContainerT::const_iterator itEnd = container.end();
+    template<typename containerT>
+    inline void deleteAll( containerT& container ) {
+        typename containerT::const_iterator it = container.begin();
+        typename containerT::const_iterator itEnd = container.end();
         for(; it != itEnd; ++it )
             delete *it;
     }
-    template<typename AssociativeContainerT>
-    inline void deleteAllValues( AssociativeContainerT& container ) {
-        typename AssociativeContainerT::const_iterator it = container.begin();
-        typename AssociativeContainerT::const_iterator itEnd = container.end();
+    template<typename AssociativecontainerT>
+    inline void deleteAllValues( AssociativecontainerT& container ) {
+        typename AssociativecontainerT::const_iterator it = container.begin();
+        typename AssociativecontainerT::const_iterator itEnd = container.end();
         for(; it != itEnd; ++it )
             delete it->second;
     }
