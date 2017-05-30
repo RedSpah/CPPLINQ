@@ -973,7 +973,7 @@ namespace cpplinq
 
 			N min, max;
 			bool first = false;
-			std::for_each(this->begin(), this->end(), [&min, &max, &first, &func](T v) {if (!first) { first = true; min = func(v); max = func(v) } else { min = std::min(min, func(v));  max = std::max(max, func(v));}});
+			std::for_each(this->begin(), this->end(), [&min, &max, &first, &func](T v) {if (!first) { first = true; min = func(v); max = func(v); } else { min = std::min(min, func(v));  max = std::max(max, func(v)); }});
 			return std::make_pair(min, max);
 		}
 
@@ -1030,7 +1030,7 @@ namespace cpplinq
 		template <typename F>
 		T accumulate(F&& accumulating_func)
 		{
-			static_assert(!std::is_void<templ::sanitizer_t<F, T, T, T>>, "Passed functor must have one of the following signatures: T(T, T), V(V, T), where V is any complete type.");
+			static_assert(!std::is_void<templ::sanitizer_t<F, T, T, T>>::value, "Passed functor must have one of the following signatures: T(T, T), V(V, T), where V is any complete type.");
 
 			return std::accumulate(begin(), end(), T(), std::forward(accumulating_func));
 		}
