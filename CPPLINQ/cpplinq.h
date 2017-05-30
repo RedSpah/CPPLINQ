@@ -146,7 +146,7 @@ namespace cpplinq
 	private:
 		
 		Cont& refcont__;
-		using self_rettype = typename container<T, IsRef, Cont>&;
+		using self_rettype = container<T, IsRef, Cont>&;
 
 	public:
 		using VectorIterType = decltype(std::declval<std::vector<T>>().begin());     
@@ -369,7 +369,7 @@ namespace cpplinq
 		{
 			static_assert(templ::is_filter_v<F, T> && !templ::is_counter_func_v<F, T>, "Passed functor must have the following signature: bool(T), where T is the type of the contained values.");
 
-			return std::all_of(begin(), end(), func);
+			return std::all_of(begin(), end(), std::forward(filter_func));
 		}
 
 		template <typename F>
@@ -377,7 +377,7 @@ namespace cpplinq
 		{
 			static_assert(templ::is_filter_v<F, T> && !templ::is_counter_func_v<F, T>, "Passed functor must have the following signature: bool(T), where T is the type of the contained values.");
 
-			return std::any_of(begin(), end(), func);
+			return std::any_of(begin(), end(), std::forward(filter_func));
 		}
 
 		template <typename F>
@@ -385,7 +385,7 @@ namespace cpplinq
 		{
 			static_assert(templ::is_filter_v<F, T> && !templ::is_counter_func_v<F, T>, "Passed functor must have the following signature: bool(T), where T is the type of the contained values.");
 
-			return std::none_of(begin(), end(), func);
+			return std::none_of(begin(), end(), std::forward(filter_func));
 		}
 
 		bool any() const
@@ -408,7 +408,7 @@ namespace cpplinq
 		{
 			static_assert(templ::is_filter_v<F, T> && !templ::is_counter_func_v<F, T>, "Passed functor must have the following signature: bool(T).");
 
-			return std::count_if(begin(), end(), filter_func);
+			return std::count_if(begin(), end(), std::forward(filter_func));
 		}
 
 		bool contains(const T& val) const
@@ -510,7 +510,7 @@ namespace cpplinq
 
 			container<R> ret;
 			ret.reserve(size()); // RESERVE, UNCHANGABLE
-			std::transform(begin(), end(), std::back_inserter(ret), [&n, &transform_func](T val) {return templ::pt_lambda<templ::is_counter_func_v<F, T>>::ret(func, val, n++); });
+			std::transform(begin(), end(), std::back_inserter(ret), [&n, &transform_func](T val) {return templ::pt_lambda<templ::is_counter_func_v<F, T>>::ret(std::forward(transform_func), val, n++); });
 			return ret;
 		}
 
@@ -521,7 +521,7 @@ namespace cpplinq
 
 			int n = 0;
 
-			std::transform(begin(), end(), begin(), [&n, &transform_func](T val) {return templ::pt_lambda<templ::is_counter_func_v<F, T>>::ret(func, val, n++); });
+			std::transform(begin(), end(), begin(), [&n, &transform_func](T val) {return templ::pt_lambda<templ::is_counter_func_v<F, T>>::ret(std::forward(transform_func), val, n++); });
 			return *this;
 		}
 
@@ -973,7 +973,7 @@ namespace cpplinq
 
 			N min, max;
 			bool first = false;
-			std::for_each(this->begin(), this->end(), [&val, &first, &func](T v) {if (!first) { first = true; min = func(v); max = func(v) } else { min = std::min(min, func(v));  max = std::max(max, func(v));}});
+			std::for_each(this->begin(), this->end(), [&min, &max, &first, &func](T v) {if (!first) { first = true; min = func(v); max = func(v) } else { min = std::min(min, func(v));  max = std::max(max, func(v));}});
 			return std::make_pair(min, max);
 		}
 
@@ -985,7 +985,7 @@ namespace cpplinq
 
 			T min, max;
 			bool first = false;
-			std::for_each(this->begin(), this->end(), [&val, &first](T v) {if (!first) { first = true; min = v; max = v; } else { min = std::min(min, v); max = std::max(max, v);}});
+			std::for_each(this->begin(), this->end(), [&min, &max, &first](T v) {if (!first) { first = true; min = v; max = v; } else { min = std::min(min, v); max = std::max(max, v);}});
 			return std::make_pair(min, max);
 		}
 
@@ -1030,7 +1030,7 @@ namespace cpplinq
 		template <typename F>
 		T accumulate(F&& accumulating_func)
 		{
-			static_assert(!std::is_void<templ::is_func_v<F, T, T, T>>::value, "Passed functor must have one of the following signatures: T(T, T), V(V, T), where V is any complete type.");
+			static_assert(!std::is_void<templ::sanitizer_t<F, T, T, T>>, "Passed functor must have one of the following signatures: T(T, T), V(V, T), where V is any complete type.");
 
 			return std::accumulate(begin(), end(), T(), std::forward(accumulating_func));
 		}
@@ -1055,12 +1055,12 @@ namespace cpplinq
 		template <bool B, typename C, bool C1, typename F1, typename F2, typename V, typename R = typename templ::sanitizer_t<F2, T, T>>
 		V inner_product(const container<T, B, C, C1>& other, V starting_val, F1&& func1, F2&& func2)
 		{
-			static_assert(!std::is_void_v<R>, "Second passed functor must have the following signature: R(T, T), where R is any complete type.");
-			static_assert(!std::is_void_v<typename templ::sanitizer_t<F1, V, R>>, "First passed functor must have the following signature: V(V, R), where V is the type of the passed initial value, and R is the type returned by the second passed functor.");
+			static_assert(!std::is_void<R>::value, "Second passed functor must have the following signature: R(T, T), where R is any complete type.");
+			static_assert(!std::is_void<typename templ::sanitizer_t<F1, V, R>>::value, "First passed functor must have the following signature: V(V, R), where V is the type of the passed initial value, and R is the type returned by the second passed functor.");
 
 			return std::inner_product(begin(), begin() + std::min(size(), other.size()), other.begin(), starting_val, std::forward(func1), std::forward(func2));
 		}
-
+		/*
 		template <bool B, typename C, bool C1, typename V>
 		V inner_product(const container<T, B, C, C1>& other, V starting_val)
 		{
@@ -1068,7 +1068,7 @@ namespace cpplinq
 			//static_assert(!std::is_void_v<typename templ::sanitizer_t<F1, V, typename templ::sanitizer_t<F2, T, T>>>, "First passed functor must have the following signature: V(V, R), where V is any complete type, and R is the type returned by the second passed functor.");
 			//TODO add addable and multiplicable stuff
 			return std::inner_product(begin(), begin() + std::min(size(), other.size()), other.begin(), starting_val);
-		}
+		}*/
 
 		/*=== GENERATION OPERATORS ===*/
 
@@ -1082,12 +1082,12 @@ namespace cpplinq
 				container<T> ret;
 				ret.reserve(size());
 				std::copy(begin(), end(), std::back_inserter(ret));
-				if (Any()) { return ret; }
+				if (any()) { return ret; }
 				else { ret.push_back(T()); return ret; }
 			}
 			else
 			{
-				if (Any()) { return *this; }
+				if (any()) { return *this; }
 				else { push_back(T()); return *this; }
 			}
 		}
@@ -1103,12 +1103,12 @@ namespace cpplinq
 				container<T> ret;
 				ret.reserve(size());
 				std::copy(begin(), end(), std::back_inserter(ret));
-				if (Any()) { return ret; }
+				if (any()) { return ret; }
 				else { ret.push_back(val); return ret; }
 			}
 			else
 			{
-				if (Any()) { return *this; }
+				if (any()) { return *this; }
 				else { push_back(val); return *this; }
 			}
 		}
@@ -1419,7 +1419,7 @@ namespace cpplinq
 		template <typename F, typename K = typename templ::sanitizer_t<F, T>>
 		std::map<K, T> to_map(F&& func)
 		{
-			static_assert(!std::is_void<K>, "Passed functor must have the following signature: K(T), where K is any type.");
+			static_assert(!std::is_void<K>::value, "Passed functor must have the following signature: K(T), where K is any type.");
 
 			std::map<K, T> ret;
 			ret.reserve(size()); // RESERVE
@@ -1430,7 +1430,7 @@ namespace cpplinq
 		template <typename F, typename K = typename templ::sanitizer_t<F, T>>
 		std::unordered_map<K, T> to_unordered_map(F&& func)
 		{
-			static_assert(!std::is_void<K>, "Passed functor must have the following signature: K(T), where K is any type.");
+			static_assert(!std::is_void<K>::value, "Passed functor must have the following signature: K(T), where K is any type.");
 
 			std::unordered_map<K, T> ret;
 			ret.reserve(size()); // RESERVE
