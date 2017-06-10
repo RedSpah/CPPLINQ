@@ -10,16 +10,9 @@ matrix:
       addons:
         apt:
           sources: ['ubuntu-toolchain-r-test']
-          packages: ['g++-4.9']
-      env: COMPILER=g++-4.9 CPPVERFLAG=-std=c++14
-
-    - os: linux
-      compiler: gcc
-      addons:
-        apt:
-          sources: ['ubuntu-toolchain-r-test']
           packages: ['g++-5']
-      env: COMPILER=g++-5 CPPVERFLAG=-std=c++14
+      env: COMPILER=g++-5 CPPVERFLAG=-std=c++14 EXTRAARGS="-Weffc++ -fprofile-arcs -ftest-coverage"  LIBS="-lgcov"
+      after_success: "gcov-5 testing.cpp"
 
     - os: linux
       compiler: gcc
@@ -27,11 +20,8 @@ matrix:
         apt:
           sources: ['ubuntu-toolchain-r-test']
           packages: ['g++-6']
-      env: COMPILER=g++-6 CPPVERFLAG=-std=c++14
-
-    - os: linux
-      compiler: clang
-      env: COMPILER=clang++ CPPVERFLAG=-std=c++14
+      env: COMPILER=g++-6 CPPVERFLAG=-std=c++14 EXTRAARGS="-Weffc++ -fprofile-arcs -ftest-coverage" LIBS="-lgcov"
+      after_success: "gcov-6 testing.cpp"
 
     - os: linux
       compiler: clang
@@ -39,7 +29,7 @@ matrix:
         apt:
           sources: ['ubuntu-toolchain-r-test', 'llvm-toolchain-precise-3.6']
           packages: ['clang-3.6']
-      env: COMPILER=clang++-3.6 CPPVERFLAG=-std=c++14
+      env: COMPILER=clang++-3.6 CPPVERFLAG=-std=c++14 EXTRAARGS="" LIBS=""
 
     - os: linux
       compiler: clang
@@ -47,7 +37,7 @@ matrix:
         apt:
           sources: ['ubuntu-toolchain-r-test', 'llvm-toolchain-precise-3.7']
           packages: ['clang-3.7']
-      env: COMPILER=clang++-3.7 CPPVERFLAG=-std=c++14
+      env: COMPILER=clang++-3.7 CPPVERFLAG=-std=c++14 EXTRAARGS="" LIBS=""
 
     - os: linux
       compiler: clang
@@ -55,7 +45,7 @@ matrix:
         apt:
           sources: ['ubuntu-toolchain-r-test', 'llvm-toolchain-precise-3.8']
           packages: ['clang-3.8']
-      env: COMPILER=clang++-3.8 CPPVERFLAG=-std=c++14
+      env: COMPILER=clang++-3.8 CPPVERFLAG=-std=c++14 EXTRAARGS="" LIBS=""
 
     - os: linux
       compiler: clang
@@ -63,13 +53,12 @@ matrix:
         apt:
           sources: ['ubuntu-toolchain-r-test', 'llvm-toolchain-precise-3.9']
           packages: ['clang-3.9']
-      env: COMPILER=clang++-3.9 CPPVERFLAG=-std=c++14
+      env: COMPILER=clang++-3.9 CPPVERFLAG=-std=c++14 EXTRAARGS="" LIBS=""
 
 script:
 - cd ./CPPLINQ
 - make CXX=$COMPILER 
 - ./test
-- gcov testing.cpp
 
-after_success:
-- bash <(curl -s https://codecov.io/bash)
+after_script:
+- bash <(curl -s https://codecov.io/bash) -f "!*.hpp.gcov"

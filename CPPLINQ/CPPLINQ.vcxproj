@@ -75,10 +75,13 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <DisableLanguageExtensions>false</DisableLanguageExtensions>
     </ClCompile>
     <PostBuildEvent>
       <Command>copy "$(ProjectDir).travis.yml" "$(ProjectDir).."
-copy "$(ProjectDir)makefile" "$(ProjectDir).."</Command>
+copy "$(ProjectDir)makefile" "$(ProjectDir).."
+copy "$(ProjectDir)codecov.yml" "$(ProjectDir).."</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -115,6 +118,7 @@ copy "$(ProjectDir)makefile" "$(ProjectDir).."</Command>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="catch.hpp" />
     <ClInclude Include="cpplinq.h" />
   </ItemGroup>
   <ItemGroup>
@@ -123,6 +127,7 @@ copy "$(ProjectDir)makefile" "$(ProjectDir).."</Command>
     </None>
   </ItemGroup>
   <ItemGroup>
+    <None Include="codecov.yml" />
     <None Include="makefile">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <FileType>CppCode</FileType>

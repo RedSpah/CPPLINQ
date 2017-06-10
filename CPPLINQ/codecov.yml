@@ -1,0 +1,2 @@
+ignore:
+- "*catch.hpp*" # to block catch.hpp

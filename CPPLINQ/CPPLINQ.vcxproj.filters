@@ -18,12 +18,18 @@
     <ClInclude Include="cpplinq.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="catch.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include=".travis.yml">
       <Filter>Resource Files</Filter>
     </None>
     <None Include="makefile">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="codecov.yml">
       <Filter>Resource Files</Filter>
     </None>
   </ItemGroup>
