@@ -169,7 +169,7 @@ namespace cpplinq
 	
 		self_rettype sort()
 		{
-			static_assert(templ::is_sortable<T>::value, "Values of the return type of the passed functor must define greater-than and less-than operators.");
+			static_assert(templ::is_sortable_v<T>, "Values of the return type of the passed functor must define greater-than and less-than operators.");
 			static_assert(!IsContConst, "Cannot call sort() on an container created from a const referenced container, a Copy() is required first.");
 
 			std::sort(begin(), end());
@@ -180,7 +180,7 @@ namespace cpplinq
 		self_rettype sort(F&& value_function)
 		{
 			static_assert(!std::is_void<R>::value, "Passed functor must have one of the following signatures: R(T), bool(T, T), where R is any type that defines operator< and operator>.");
-			static_assert(templ::is_sortable<R>::value, "Values of the return type of the passed functor must define greater-than and less-than operators.");
+			static_assert(templ::is_sortable_v<R>, "Values of the return type of the passed functor must define greater-than and less-than operators.");
 			static_assert(!IsContConst, "Cannot call sort(F value_function) on an container created from a const referenced container, a copy() is required first.");
 
 			std::sort(begin(), end(), [value_function = std::forward<F>(value_function)](T& val1, T& val2) {return value_function(val1) < value_function(val2); });
@@ -201,7 +201,7 @@ namespace cpplinq
 
 		bool is_sorted()
 		{
-			static_assert(templ::is_sortable<T>::value, "Values of the return type of the passed functor must define greater-than and less-than operators.");
+			static_assert(templ::is_sortable_v<T>, "Values of the return type of the passed functor must define greater-than and less-than operators.");
 			static_assert(!IsContConst, "Cannot call sort() on an container created from a const referenced container, a Copy() is required first.");
 
 			return std::is_sorted(begin(), end());
@@ -211,7 +211,7 @@ namespace cpplinq
 		bool is_sorted(F&& value_function)
 		{
 			static_assert(!std::is_void<R>::value, "Passed functor must have one of the following signatures: R(T), bool(T, T), where R is any type that defines operator< and operator>, and T is the type of the values contained within this container.");
-			static_assert(templ::is_sortable<R>::value, "Values of the return type of the passed functor must define greater-than and less-than operators.");
+			static_assert(templ::is_sortable_v<R>, "Values of the return type of the passed functor must define greater-than and less-than operators.");
 			static_assert(!IsContConst, "Cannot call sort(F func) on an container created from a const referenced container, a Copy() is required first.");
 		
 			return std::is_sorted(begin(), end(), [value_function = std::forward<F>(value_function)](T& val1, T& val2) {return value_function(val1) < value_function(val2); });
@@ -221,7 +221,7 @@ namespace cpplinq
 		bool is_sorted(F&& comparator_function)
 		{
 			static_assert(!std::is_void<R>::value, "Passed functor must have one of the following signatures: R(T), bool(T, T), where R is any type that defines operator< and operator>, and T is the type of the values contained within this container.");
-			static_assert(templ::is_sortable<R>::value, "Values of the return type of the passed functor must define greater-than and less-than operators.");
+			static_assert(templ::is_sortable_v<R>, "Values of the return type of the passed functor must define greater-than and less-than operators.");
 			static_assert(!IsContConst, "Cannot call sort(F func) on an container created from a const referenced container, a Copy() is required first.");
 
 			return std::is_sorted(begin(), end(), std::forward<F>(comparator_function));
@@ -231,7 +231,7 @@ namespace cpplinq
 
 		self_rettype partial_sort(std::size_t N)
 		{
-			static_assert(templ::is_sortable<T>::value, "Values of the return type of the passed functor must define greater-than and less-than operators.");
+			static_assert(templ::is_sortable_v<T>, "Values of the return type of the passed functor must define greater-than and less-than operators.");
 			static_assert(!IsContConst, "Cannot call sort() on an container created from a const referenced container, a Copy() is required first.");
 
 			std::partial_sort(begin(), std::min(begin() + N, end()), end());
@@ -242,7 +242,7 @@ namespace cpplinq
 		self_rettype partial_sort(std::size_t N, F&& value_function)
 		{
 			static_assert(!std::is_void<R>::value, "Passed functor must have one of the following signatures: R(T), bool(T, T), where R is any type that defines operator< and operator>, and T is the type of the values contained within this container.");
-			static_assert(templ::is_sortable<R>::value, "Values of the return type of the passed functor must define greater-than and less-than operators.");
+			static_assert(templ::is_sortable_v<R>, "Values of the return type of the passed functor must define greater-than and less-than operators.");
 			static_assert(!IsContConst, "Cannot call sort(F func) on an container created from a const referenced container, a Copy() is required first.");
 
 			std::partial_sort(begin(), std::min(begin() + N, end()), end(), [value_function = std::forward<F>(value_function)](T& val1, T& val2) {return value_function(val1) < value_function(val2); });
@@ -253,7 +253,7 @@ namespace cpplinq
 		self_rettype partial_sort(std::size_t N, F&& comparator_function)
 		{
 			static_assert(!std::is_void<R>::value, "Passed functor must have one of the following signatures: R(T), bool(T, T), where R is any type that defines operator< and operator>, and T is the type of the values contained within this container.");
-			static_assert(templ::is_sortable<R>::value, "Values of the return type of the passed functor must define greater-than and less-than operators.");
+			static_assert(templ::is_sortable_v<R>, "Values of the return type of the passed functor must define greater-than and less-than operators.");
 			static_assert(!IsContConst, "Cannot call sort(F func) on an container created from a const referenced container, a Copy() is required first.");
 
 			std::partial_sort(begin(), std::min(begin() + N, end()), end(), std::forward<F>(comparator_function));
@@ -264,7 +264,7 @@ namespace cpplinq
 
 		self_rettype stable_sort()
 		{
-			static_assert(templ::is_sortable<T>::value, "Values of the return type of the passed functor must define greater-than and less-than operators.");
+			static_assert(templ::is_sortable_v<T>, "Values of the return type of the passed functor must define greater-than and less-than operators.");
 			static_assert(!IsContConst, "Cannot call sort() on an container created from a const referenced container, a Copy() is required first.");
 
 			std::stable_sort(begin(), end());
@@ -275,7 +275,7 @@ namespace cpplinq
 		self_rettype stable_sort(F&& value_function)
 		{
 			static_assert(!std::is_void<R>::value, "Passed functor must have one of the following signatures: R(T), bool(T, T), where R is any type that defines operator< and operator>, and T is the type of the values contained within this container.");
-			static_assert(templ::is_sortable<R>::value, "Values of the return type of the passed functor must define greater-than and less-than operators.");
+			static_assert(templ::is_sortable_v<R>, "Values of the return type of the passed functor must define greater-than and less-than operators.");
 			static_assert(!IsContConst, "Cannot call sort(F func) on an container created from a const referenced container, a Copy() is required first.");
 
 			std::stable_sort(begin(), end(), [value_function = std::forward<F>(value_function)](T val1, T val2) {return value_function(val1) < value_function(val2); });
@@ -286,7 +286,7 @@ namespace cpplinq
 		self_rettype stable_sort(F&& comparator_function)
 		{
 			static_assert(!std::is_void<R>::value, "Passed functor must have one of the following signatures: R(T), bool(T, T), where R is any type that defines operator< and operator>, and T is the type of the values contained within this container.");
-			static_assert(templ::is_sortable<R>::value, "Values of the return type of the passed functor must define greater-than and less-than operators.");
+			static_assert(templ::is_sortable_v<R>, "Values of the return type of the passed functor must define greater-than and less-than operators.");
 			static_assert(!IsContConst, "Cannot call sort(F func) on an container created from a const referenced container, a Copy() is required first.");
 
 			std::stable_sort(begin(), end(), std::forward<F>(comparator_function));
@@ -786,7 +786,7 @@ namespace cpplinq
 		template <bool B, typename C, bool C1>
 		container<T> merge(const container<T, B, C, C1>& other)
 		{
-			static_assert(templ::is_sortable<T>::value, "Contained values must define operator< and operator>.");
+			static_assert(templ::is_sortable_v<T>, "Contained values must define operator< and operator>.");
 			container<T> ret;
 			ret.reserve(size() + other.size());
 			std::merge(begin(), end(), other.begin(), other.end(), std::back_inserter(ret));
@@ -809,7 +809,7 @@ namespace cpplinq
 		template <bool B0, typename C, bool B1, std::size_t N1, std::size_t N2>
 		container<T> set_difference(const container<T, B0, C, B1>& other, reserve::res_var<N1> reserve_amount1 = reserve::half(), reserve::res_var<N2> reserve_amount2 = reserve::half())
 		{
-			static_assert(templ::is_sortable<T>::value, "Contained values must define operator< and operator>.");
+			static_assert(templ::is_sortable_v<T>, "Contained values must define operator< and operator>.");
 
 			container<T> ret;
 			ret.reserve(size() * reserve_amount1.value() + other.size() * reserve_amount2.value()); // RESERVE
@@ -833,7 +833,7 @@ namespace cpplinq
 		template <bool B0, typename C, bool B1, std::size_t N1, std::size_t N2>
 		container<T> set_intersection(const container<T, B0, C, B1>& other, reserve::res_var<N1> reserve_amount1 = reserve::half(), reserve::res_var<N2> reserve_amount2 = reserve::half())
 		{
-			static_assert(templ::is_sortable<T>::value, "Contained values must define operator< and operator>.");
+			static_assert(templ::is_sortable_v<T>, "Contained values must define operator< and operator>.");
 
 			container<T> ret;
 			ret.reserve(size() * reserve_amount1.value() + other.size() * reserve_amount2.value()); // RESERVE
@@ -857,7 +857,7 @@ namespace cpplinq
 		template <bool B0, typename C, bool B1, std::size_t N1, std::size_t N2>
 		container<T> set_union(const container<T, B0, C, B1>& other, reserve::res_var<N1> reserve_amount1 = reserve::three_quarters(), reserve::res_var<N2> reserve_amount2 = reserve::three_quarters())
 		{
-			static_assert(templ::is_sortable<T>::value, "Contained values must define operator< and operator>.");
+			static_assert(templ::is_sortable_v<T>, "Contained values must define operator< and operator>.");
 
 			container<T> ret;
 			ret.reserve(size() * reserve_amount1.value() + other.size() * reserve_amount2.value()); // RESERVE
