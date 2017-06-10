@@ -11,6 +11,7 @@
 #include <algorithm>
 #include <numeric>
 #include <type_traits>
+#include <utility>
 
 #include <exception>
 #include <stdexcept>
@@ -22,15 +23,26 @@ namespace cpplinq
 
 	enum class alloc_mode : unsigned char {no_alloc, auto_alloc};
 
-	namespace res
+	namespace reserve
 	{
 		template <std::size_t thousands>
-		struct res_var { static constexpr float res = ((float)thousands / 1000); };
+		struct res_var { static constexpr float val__ = ((float)thousands / 1000); constexpr float value() { return val__; } };
 
-		using none = res_var<0>;	
+		using none = res_var<0>;
+		using hundredth = res_var<10>;
+		using twentieth = res_var<50>;
+		using tenth = res_var<100>;
+		using sixth = res_var<166>;
+		using fifth = res_var<200>;
+		using quarter = res_var<250>;
+		using third = res_var<333>;
 		using half = res_var<500>;
-		using full = res_var<1000>;
+		using two_thirds = res_var<666>;
+		using three_quarters = res_var<750>;
+		using one = res_var<1000>;
+		using one_and_a_half = res_var<1500>;
 		using two = res_var<2000>;
+		using two_and_a_half = res_var<2500>;
 		using three = res_var<3000>;
 		using five = res_var<5000>;
 		using ten = res_var<10000>;
@@ -38,43 +50,10 @@ namespace cpplinq
 
 	namespace templ
 	{
-		template<class ...> using void_t = void;
-
-		template <class = void, class = void>
-		struct is_sortable : std::false_type {};
-
-		template <class T>
-		struct is_sortable<T, void_t<typename std::enable_if<std::is_convertible<decltype(std::declval<T>() < std::declval<T>()), bool>::value>::type, typename std::enable_if<std::is_convertible<decltype(std::declval<T>() > std::declval<T>()), bool>::value>::type>> : std::true_type {};
-	
-		template <class T>
-		constexpr bool is_sortable_v = is_sortable<T>::value;
-
-		template <class = void, class = void>
-		struct is_comparable : std::false_type {};
-
-		template <class T>
-		struct is_comparable<T, void_t<typename std::enable_if<std::is_convertible<decltype(std::declval<T>() == std::declval<T>()), bool>::value>::type, typename std::enable_if<std::is_convertible<decltype(std::declval<T>() != std::declval<T>()), bool>::value>::type>> : std::true_type {};
-
-		template <class T>
-		constexpr bool is_comparable_v = is_comparable<T>::value;
-
-		template <class = void, class = void>
-		struct is_container : std::false_type {};
-
-		template <typename T>
-		struct is_container<T, void_t<decltype(std::declval<T>().begin()), decltype(std::declval<T>().end())>> : std::true_type {};
-
-		template <class T>
-		constexpr bool is_container_v = is_container<T>::value;
-
-		template <typename T>
-		using value_type_t = typename std::decay<decltype(*(std::declval<T>().begin()))>::type;
-
-		template <typename F>
-		using ret_type = typename std::result_of<F>::type;
-
-		template <typename T>
-		using dummy_iterator_t = typename std::vector<T>::iterator;
+		template<typename ...> using void_t = void;
+			
+		template <typename T> using value_type_t = typename std::decay<decltype(*(std::declval<T>().begin()))>::type;
+		template <typename T> using vector_iterator_t = typename std::vector<T>::iterator;
 
 		//http://stackoverflow.com/questions/24233516/checking-correctness-of-function-call-expression
 		template<typename F, typename... Args>
@@ -92,51 +71,37 @@ namespace cpplinq
 		template <typename F, typename... A>
 		constexpr bool is_defined_v = is_valid_call<F, A...>::value;
 
-		template <typename = void, bool = false, typename...>
-		struct sanitizer_impl {using type = void; };
+		template <typename T1, typename T2> struct plus { template <typename R = decltype(std::declval<T1>() + std::declval<T2>())> constexpr R operator()(const T1& L_, const T2& R_) { return L_ + R_; } using type = decltype(std::declval<T1>() + std::declval<T2>());};
+		template <typename T1, typename T2> struct mul { template <typename R = decltype(std::declval<T1>() * std::declval<T2>())> constexpr R operator()(const T1& L_, const T2& R_) { return L_ * R_; } using type = decltype(std::declval<T1>() * std::declval<T2>()); };
 
-		template <typename F, typename... A>
-		struct sanitizer_impl<F, true, A...> { using type = typename std::result_of<F(A...)>::type; };
+		template <typename T1, typename T2> constexpr bool is_addable_v = is_defined_v<plus<>, T1, T2>;
+		//template <typename T> constexpr bool is_addable_v = is_defined_v<std::plus<>, T, T>;
+		template <typename T> constexpr bool is_multiplicative_v = is_defined_v<std::multiplies<>, T, T>;
+		template <typename T> constexpr bool is_sortable_v = is_defined_v<std::less<>, T, T> || is_defined_v<std::greater<>, T, T>;
+		template <typename T> constexpr bool is_comparable_v = is_defined_v<std::equal_to<>, T, T> || is_defined_v<std::not_equal_to<>, T, T>;
 
-		// produces an intellisense error in visual studio, but compiles correctly
-		template <typename F, typename... A>
-		using sanitizer_t = typename sanitizer_impl<F, is_defined_v<F, A...>, A...>::type;
+		template <class = void, class = void> struct is_container : std::false_type {};
+		template <typename T> struct is_container<T, void_t<decltype(std::declval<T>().begin()), decltype(std::declval<T>().end())>> : std::true_type {};
+		template <class T> constexpr bool is_container_v = is_container<T>::value;
 
-		template <typename = void, typename = void, bool = false, typename...>
-		struct is_func_impl : std::false_type {};
+		template <typename = void, bool = false, typename...> struct sanitizer_impl {using type = void; };
+		template <typename F, typename... A> struct sanitizer_impl<F, true, A...> { using type = typename std::result_of<F(A...)>::type; };
+		template <typename F, typename... A> using sanitizer_t = typename sanitizer_impl<F, is_defined_v<F, A...>, A...>::type;
 
-		template <typename F, typename  R, typename... A>
-		struct is_func_impl<F, R, true, A...> : std::integral_constant<bool, std::is_same<typename std::result_of<F(A...)>::type, R>::value> {};
+		template <typename = void, typename = void, bool = false, typename...> struct is_func_impl : std::false_type {};
+		template <typename F, typename R, typename... A> struct is_func_impl<F, R, true, A...> : std::integral_constant<bool, std::is_same<typename std::result_of<F(A...)>::type, R>::value> {};
+		template <typename F, typename R, typename... A> constexpr auto is_func_v = is_func_impl<F, R, is_defined_v<F, A...>, A...>::value;
 
-		template <typename F, typename R, typename... A>
-		constexpr auto is_func_v = is_func_impl<F, R, is_defined_v<F, A...>, A...>::value;
+		template <typename F, typename A> constexpr bool is_counter_func_v = is_defined_v<F, A, std::size_t>;
+		template <typename F, typename A> constexpr bool is_filter_v = is_func_v<F, bool, A> || is_func_v<F, bool, A, std::size_t>;
 
-		template <typename F, typename A>
-		constexpr bool is_counter_func_v = is_defined_v<F, A, std::size_t>;
-
-		template <typename F, typename A>
-		constexpr bool is_filter_v = is_func_v<F, bool, A> || is_func_v<F, bool, A, std::size_t>;
-
-		template <typename F, typename A>
-		using safe_result_of_t = typename std::conditional<is_counter_func_v<F, A>, sanitizer_t<F, A, int>, sanitizer_t<F, A>>::type;
-
-		constexpr bool lol = false;
-
-
+		template <typename F, typename A> using safe_result_of_t = typename std::conditional<is_counter_func_v<F, A>, sanitizer_t<F, A, int>, sanitizer_t<F, A>>::type;
 
 		template <bool B>
-		struct pt_lambda
-		{
-			template <typename F, typename T, typename R = typename std::result_of<F(T)>::type>
-			static inline R ret(F& func, T& val, int n) { ++n; return func(val); }
-		};
+		struct counter_func_lambda {template <typename F, typename T, typename R = typename std::result_of<F(T)>::type> static inline R ret(F&& func, T& val, int n) { ++n; return func(val); }};
 
 		template <>
-		struct pt_lambda<true>
-		{
-			template <typename F, typename T, typename R = typename std::result_of<F(T, int)>::type>
-			static inline R ret(F& func, T& val, int n) { return func(val, n); }
-		};
+		struct counter_func_lambda<true> {template <typename F, typename T, typename R = typename std::result_of<F(T, int)>::type> static inline R ret(F&& func, T& val, int n) { return func(val, n); }};
 	}
 
 
@@ -214,22 +179,21 @@ namespace cpplinq
 		template <typename F, typename R = typename templ::sanitizer_t<F, T>, typename SFINAE_GUARD = typename std::enable_if<!templ::is_defined_v<F, T, T>>>
 		self_rettype sort(F&& value_function)
 		{
-			static_assert(!std::is_void<R>::value, "Passed functor must have one of the following signatures: R(T), bool(T, T), where R is any type that defines operator< and operator>, and T is the type of the values contained within this container.");
+			static_assert(!std::is_void<R>::value, "Passed functor must have one of the following signatures: R(T), bool(T, T), where R is any type that defines operator< and operator>.");
 			static_assert(templ::is_sortable<R>::value, "Values of the return type of the passed functor must define greater-than and less-than operators.");
-			static_assert(!IsContConst, "Cannot call sort(F func) on an container created from a const referenced container, a Copy() is required first.");
+			static_assert(!IsContConst, "Cannot call sort(F value_function) on an container created from a const referenced container, a copy() is required first.");
 
-			std::sort(begin(), end(), [&value_function](T val1, T val2) {return value_function(val1) < value_function(val2); });
+			std::sort(begin(), end(), [value_function = std::forward<F>(value_function)](T& val1, T& val2) {return value_function(val1) < value_function(val2); });
 			return *this;
 		}
 
 		template <typename F, typename R = typename templ::sanitizer_t<F, T, T>, typename SFINAE_GUARD = typename std::enable_if<!templ::is_defined_v<F, T>>, typename = void>
 		self_rettype sort(F&& comparator_function)
 		{
-			static_assert(!std::is_void<R>::value, "Passed functor must have one of the following signatures: R(T), bool(T, T), where R is any type that defines operator< and operator>, and T is the type of the values contained within this container.");
-			static_assert(templ::is_sortable<R>::value, "Values of the return type of the passed functor must define greater-than and less-than operators.");
-			static_assert(!IsContConst, "Cannot call sort(F func) on an container created from a const referenced container, a Copy() is required first.");
+			static_assert(!std::is_same<R, bool>::value, "Passed functor must have one of the following signatures: R(T), bool(T, T), where R is any type that defines operator< and operator>.");
+			static_assert(!IsContConst, "Cannot call sort(F func) on an container created from a const referenced container, a copy() is required first.");
 
-			std::sort(begin(), end(), comparator_function);
+			std::sort(begin(), end(), std::forward<F>(comparator_function));
 			return *this;
 		}
 
@@ -250,7 +214,7 @@ namespace cpplinq
 			static_assert(templ::is_sortable<R>::value, "Values of the return type of the passed functor must define greater-than and less-than operators.");
 			static_assert(!IsContConst, "Cannot call sort(F func) on an container created from a const referenced container, a Copy() is required first.");
 		
-			return std::is_sorted(begin(), end(), [&value_function](T& val1, T& val2) {return value_function(val1) < value_function(val2); });
+			return std::is_sorted(begin(), end(), [value_function = std::forward<F>(value_function)](T& val1, T& val2) {return value_function(val1) < value_function(val2); });
 		}
 
 		template <typename F, typename R = typename templ::sanitizer_t<F, T, T>, typename SFINAE_GUARD = typename std::enable_if<!templ::is_defined_v<F, T>>, typename = void>
@@ -260,7 +224,7 @@ namespace cpplinq
 			static_assert(templ::is_sortable<R>::value, "Values of the return type of the passed functor must define greater-than and less-than operators.");
 			static_assert(!IsContConst, "Cannot call sort(F func) on an container created from a const referenced container, a Copy() is required first.");
 
-			return std::is_sorted(begin(), end(), comparator_function);
+			return std::is_sorted(begin(), end(), std::forward<F>(comparator_function));
 		}
 
 
@@ -281,7 +245,7 @@ namespace cpplinq
 			static_assert(templ::is_sortable<R>::value, "Values of the return type of the passed functor must define greater-than and less-than operators.");
 			static_assert(!IsContConst, "Cannot call sort(F func) on an container created from a const referenced container, a Copy() is required first.");
 
-			std::partial_sort(begin(), std::min(begin() + N, end()), end(), [&value_function](T val1, T val2) {return value_function(val1) < value_function(val2); });
+			std::partial_sort(begin(), std::min(begin() + N, end()), end(), [value_function = std::forward<F>(value_function)](T& val1, T& val2) {return value_function(val1) < value_function(val2); });
 			return *this;
 		}
 
@@ -292,7 +256,7 @@ namespace cpplinq
 			static_assert(templ::is_sortable<R>::value, "Values of the return type of the passed functor must define greater-than and less-than operators.");
 			static_assert(!IsContConst, "Cannot call sort(F func) on an container created from a const referenced container, a Copy() is required first.");
 
-			std::partial_sort(begin(), std::min(begin() + N, end()), end(), comparator_function);
+			std::partial_sort(begin(), std::min(begin() + N, end()), end(), std::forward<F>(comparator_function));
 			return *this;
 		}
 
@@ -314,7 +278,7 @@ namespace cpplinq
 			static_assert(templ::is_sortable<R>::value, "Values of the return type of the passed functor must define greater-than and less-than operators.");
 			static_assert(!IsContConst, "Cannot call sort(F func) on an container created from a const referenced container, a Copy() is required first.");
 
-			std::stable_sort(begin(), end(), [&value_function](T val1, T val2) {return value_function(val1) < value_function(val2); });
+			std::stable_sort(begin(), end(), [value_function = std::forward<F>(value_function)](T val1, T val2) {return value_function(val1) < value_function(val2); });
 			return *this;
 		}
 
@@ -325,7 +289,7 @@ namespace cpplinq
 			static_assert(templ::is_sortable<R>::value, "Values of the return type of the passed functor must define greater-than and less-than operators.");
 			static_assert(!IsContConst, "Cannot call sort(F func) on an container created from a const referenced container, a Copy() is required first.");
 
-			std::stable_sort(begin(), end(), comparator_function);
+			std::stable_sort(begin(), end(), std::forward<F>(comparator_function));
 			return *this;
 		}
 
@@ -339,7 +303,7 @@ namespace cpplinq
 			static_assert(templ::is_filter_v<F, T>, "Passed functor must have one of the following signatures: bool(T), where T is the type of the values contained within this container.");
 			static_assert(!IsContConst, "Cannot call sort(F func) on an container created from a const referenced container, a Copy() is required first.");
 
-			std::partition(begin(), end(), partitioning_function);
+			std::partition(begin(), end(), std::forward<F>(partitioning_function));
 			return *this;
 		}
 
@@ -349,7 +313,7 @@ namespace cpplinq
 			static_assert(templ::is_filter_v<F, T>, "Passed functor must have one of the following signatures: bool(T), where T is the type of the values contained within this container.");
 			static_assert(!IsContConst, "Cannot call sort(F func) on an container created from a const referenced container, a Copy() is required first.");
 
-			return std::is_partitioned(begin(), end(), partitioning_function);	
+			return std::is_partitioned(begin(), end(), std::forward<F>(partitioning_function));
 		}
 
 		template <typename F>
@@ -358,7 +322,7 @@ namespace cpplinq
 			static_assert(templ::is_filter_v<F, T>, "Passed functor must have one of the following signatures: bool(T), where T is the type of the values contained within this container.");
 			static_assert(!IsContConst, "Cannot call sort(F func) on an container created from a const referenced container, a Copy() is required first.");
 
-			std::stable_partition(begin(), end(), partitioning_function);
+			std::stable_partition(begin(), end(), std::forward<F>(partitioning_function));
 			return *this;
 		}
 
@@ -369,7 +333,7 @@ namespace cpplinq
 		{
 			static_assert(templ::is_filter_v<F, T> && !templ::is_counter_func_v<F, T>, "Passed functor must have the following signature: bool(T), where T is the type of the contained values.");
 
-			return std::all_of(begin(), end(), std::forward(filter_func));
+			return std::all_of(begin(), end(), std::forward<F>(filter_func));
 		}
 
 		template <typename F>
@@ -377,7 +341,7 @@ namespace cpplinq
 		{
 			static_assert(templ::is_filter_v<F, T> && !templ::is_counter_func_v<F, T>, "Passed functor must have the following signature: bool(T), where T is the type of the contained values.");
 
-			return std::any_of(begin(), end(), std::forward(filter_func));
+			return std::any_of(begin(), end(), std::forward<F>(filter_func));
 		}
 
 		template <typename F>
@@ -385,7 +349,7 @@ namespace cpplinq
 		{
 			static_assert(templ::is_filter_v<F, T> && !templ::is_counter_func_v<F, T>, "Passed functor must have the following signature: bool(T), where T is the type of the contained values.");
 
-			return std::none_of(begin(), end(), std::forward(filter_func));
+			return std::none_of(begin(), end(), std::forward<F>(filter_func));
 		}
 
 		bool any() const
@@ -408,7 +372,18 @@ namespace cpplinq
 		{
 			static_assert(templ::is_filter_v<F, T> && !templ::is_counter_func_v<F, T>, "Passed functor must have the following signature: bool(T).");
 
-			return std::count_if(begin(), end(), std::forward(filter_func));
+			return std::count_if(begin(), end(), std::forward<F>(filter_func));
+		}
+
+		// TODO ADD FIND_IF ADJACENT_FIND
+
+		template <typename F>
+		T find_if(F&& selection_func)
+		{
+			static_assert(templ::is_filter_v<F, T>, "Passed functor must have the following signature: bool(T).");
+
+			auto v = std::find_if(begin(), end(), std::forward<F>(selection_func));
+
 		}
 
 		bool contains(const T& val) const
@@ -434,29 +409,29 @@ namespace cpplinq
 			return ret;
 		}
 
-		template <typename F>
-		container<T> copy_if(F func)
+		template <typename F, std::size_t N>
+		container<T> copy_if(F&& filter_func, reserve::res_var<N> reserve_amount = reserve::half)
 		{
 			static_assert(templ::is_filter_v<F, T>, "Passed functor must have one of the following signatures: bool(T) or bool(T, int), where T is the type of the contained values.");
 
 			int n = 0;
 
 			container<T> ret;
-			ret.reserve(size()); // RESERVE
-			std::copy_if(begin(), end(), std::back_inserter(ret), [&n, &func](T val) {return templ::pt_lambda<templ::is_counter_func_v<F, T>>::ret(func, val, n++); });
+			ret.reserve(size() * reserve_amount.value()); // RESERVE
+			std::copy_if(begin(), end(), std::back_inserter(ret), [&n, filter_func = std::forward<T>(filter_func)](T val) {return templ::counter_func_lambda<templ::is_counter_func_v<F, T>>::ret(std::forward<F>(filter_func), val, n++); });
 			return ret;		
 		}
 
 		container<T> copy_n(std::size_t N)
 		{
 			container<T> ret;
-			ret.reserve(size());
+			ret.reserve(std::min(size(), N));
 			std::copy(begin(), std::min(begin() + N, end()), ret.begin());
 			return ret;
 		}
 
-		template <alloc_mode MemMode = alloc_mode::no_alloc, bool AllowAlloc = (MemMode == alloc_mode::auto_alloc), typename RetVal = typename std::conditional<IsRef && AllowAlloc, container<T>, container<T>&>::type, typename F>
-		RetVal where(F func)
+		template <alloc_mode MemMode = alloc_mode::no_alloc, bool AllowAlloc = (MemMode == alloc_mode::auto_alloc), typename RetVal = typename std::conditional<IsRef && AllowAlloc, container<T>, container<T>&>::type, typename F, std::size_t N>
+		RetVal where(F&& filter_func, reserve::res_var<N> reserve_amount = reserve::half)
 		{
 			static_assert(templ::is_filter_v<F, T>, "Passed functor must have one of the following signatures: bool(T) or bool(T, int), where T is the type of the contained values.");
 			static_assert(!IsRef || AllowAlloc, "Cannot call Where() on an container created from a referenced container, either a Copy() or specifying cpplinq::mem::auto_alloc as the first template argument is required first.");
@@ -466,13 +441,13 @@ namespace cpplinq
 			if (IsRef && AllowAlloc)
 			{
 				container<T> ret;
-				ret.reserve(size()); // RESERVE
-				std::copy_if(begin(), end(), std::back_inserter(ret), [&n, &func](T val) {return templ::pt_lambda<templ::is_counter_func_v<F, T>>::ret(func, val, n++); });
+				ret.reserve(size() * reserve_amount.value()); // RESERVE
+				std::copy_if(begin(), end(), std::back_inserter(ret), [&n, filter_func = std::forward<T>(filter_func)](T val) {return templ::counter_func_lambda<templ::is_counter_func_v<F, T>>::ret(std::forward<T>(filter_func), val, n++); });
 				return ret;
 			}
 			else
 			{
-				erase(std::copy_if(begin(), end(), begin(), [&n, &func](T val) {return templ::pt_lambda<templ::is_counter_func_v<F, T>>::ret(func, val, n++); }), end());
+				erase(std::copy_if(begin(), end(), begin(), [&n, filter_func = std::forward<T>(filter_func)](T val) {return templ::counter_func_lambda<templ::is_counter_func_v<F, T>>::ret(std::forward<T>(filter_func), val, n++); }), end());
 				return *this;
 			}
 		}
@@ -509,8 +484,8 @@ namespace cpplinq
 			int n = 0;
 
 			container<R> ret;
-			ret.reserve(size()); // RESERVE, UNCHANGABLE
-			std::transform(begin(), end(), std::back_inserter(ret), [&n, &transform_func](T val) {return templ::pt_lambda<templ::is_counter_func_v<F, T>>::ret(std::forward(transform_func), val, n++); });
+			ret.reserve(size());
+			std::transform(begin(), end(), std::back_inserter(ret), [&n, transform_func = std::forward<F>(transform_func)](T val) {return templ::counter_func_lambda<templ::is_counter_func_v<F, T>>::ret(std::forward<F>(transform_func), val, n++); });
 			return ret;
 		}
 
@@ -521,7 +496,7 @@ namespace cpplinq
 
 			int n = 0;
 
-			std::transform(begin(), end(), begin(), [&n, &transform_func](T val) {return templ::pt_lambda<templ::is_counter_func_v<F, T>>::ret(std::forward(transform_func), val, n++); });
+			std::transform(begin(), end(), begin(), [&n, transform_func = std::forward<F>(transform_func)](T val) {return templ::counter_func_lambda<templ::is_counter_func_v<F, T>>::ret(std::forward<F>(transform_func), val, n++); });
 			return *this;
 		}
 
@@ -530,7 +505,9 @@ namespace cpplinq
 		{
 			static_assert(std::is_same<R, T>::value, "Passed functor must have the following signature: T().");
 
-			std::generate(begin(), end(), std::forward(generator_func));
+			int n = 0;
+
+			std::generate(begin(), end(), std::forward<F>(generator_func));
 			return *this;
 		}
 
@@ -539,7 +516,7 @@ namespace cpplinq
 		{
 			static_assert(std::is_same<R, T>::value, "Passed functor must have the following signature: T().");
 
-			std::generate(begin(), std::min(begin() + N, end()), generator_func);
+			std::generate(begin(), std::min(begin() + N, end()), std::forward<F>(generator_func));
 			return *this;
 		}
 
@@ -559,7 +536,7 @@ namespace cpplinq
 
 			std::size_t n = 0;
 
-			std::replace_if(begin(), end(), [&filter_func, &n](T& val) {templ::pt_lambda<templ::is_counter_func_v<F, T>>::ret(filter_func, val, n++); }, newval);
+			std::replace_if(begin(), end(), [filter_func = std::forward<F>(filter_func), &n](T& val) {templ::counter_func_lambda<templ::is_counter_func_v<F, T>>::ret(std::forward<F>(filter_func), val, n++); }, newval);
 			return *this;
 		}
 
@@ -581,14 +558,15 @@ namespace cpplinq
 
 			container<T> ret;
 			ret.reserve(size());
-			std::replace_copy_if(begin(), end(), ret.begin(), [&filter_func, &n](T& val) {templ::pt_lambda<templ::is_counter_func_v<F, T>>::ret(filter_func, val, n++); }, newval);
+			std::replace_copy_if(begin(), end(), ret.begin(), [filter_func = std::forward<F>(filter_func), &n](T& val) {templ::counter_func_lambda<templ::is_counter_func_v<F, T>>::ret(std::forward<F>(filter_func), val, n++); }, newval);
 			return ret;
 		}
 
 		template <typename C>
-		void swap_ranges(container<T, true, C>& other)
+		self_rettype swap_ranges(container<T, true, C>& other)
 		{
 			std::swap_ranges(begin(), begin() + std::min(size(), other.size()), other.begin());
+			return *this;
 		}
 
 		self_rettype reverse()
@@ -609,19 +587,19 @@ namespace cpplinq
 			return *this;
 		}
 
-		self_rettype rotate(int N)
+		self_rettype rotate(int n)
 		{
 			static_assert(!IsContConst, "Cannot call rotate() on a container created from a const referenced container, use rotate_copy() instead.");
 
-			std::size_t real_rot = N % size();
+			std::size_t real_rot = n % size();
 
 			std::rotate(begin(), begin() + real_rot, end());
 			return *this;
 		}
 		
-		container<T> rotate_copy(int N)
+		container<T> rotate_copy(int n)
 		{
-			std::size_t real_rot = N % size();
+			std::size_t real_rot = n % size();
 
 			container<T> ret;
 			ret.reserve(size());
@@ -635,7 +613,7 @@ namespace cpplinq
 		{
 			static_assert(!IsContConst, "Cannot call rotate() on a container created from a const referenced container, use rotate_copy() instead.");
 
-			std::shuffle(begin(), end(), std::forward(RNG_source));
+			std::shuffle(begin(), end(), std::forward<RNG>(RNG_source));
 			return *this;
 		}
 
@@ -644,42 +622,43 @@ namespace cpplinq
 			static_assert(!IsRef, "Cannot call unique() on a container created from a referenced container, use unique_copy() instead.");
 			static_assert(templ::is_comparable_v<T>, "T must implement operator== and operator!=.");
 
-			std::unique(begin(), end());
+			std::erase(std::unique(begin(), end()), end());
 			return *this;
 		}
 
-		container<T> unique_copy()
+		template <std::size_t N>
+		container<T> unique_copy(reserve::res_var<N> reserve_amount = reserve::half)
 		{
 			static_assert(templ::is_comparable_v<T>, "T must implement operator== and operator!=.");
 
 			container<T> ret;
-
+			ret.reserve(size() * reserve_amount.value());
 			std::unique_copy(begin(), end(), std::back_inserter(ret));
 			return ret;
 		}
 
-		template <typename F, typename RC = typename templ::safe_result_of_t<F, T>, typename R = typename templ::value_type_t<RC>>
-		container<R> select_many(F func)
+		template <typename F, typename RC = typename templ::safe_result_of_t<F, T>, typename R = typename templ::value_type_t<RC>, std::size_t N>
+		container<R> select_many(F&& select_func, reserve::res_var<N> reserve_amount = reserve::two)
 		{
 			static_assert(!std::is_same<RC, void>::value, "Passed selection functor must have the following signature: RC(T) or RC(T, int), where RC is a container, and T is the type of the contained elements within this container.");
 			static_assert(!templ::is_container<RC>::value, "Return type of the passed functor must implement begin() and end().");
 
 			container<R> ret;
-			ret.reserve(size()); // RESERVING
+			ret.reserve(size() * reserve_amount.value()); // RESERVING
 
 			int n = 0;
 
-			std::for_each(begin(), end(), [&n, &ret, &func](T val)
+			std::for_each(begin(), end(), [&n, &ret, select_func = std::forward<F>(select_func)](T val)
 			{
-				RC rc = templ::pt_lambda<templ::is_counter_func_v<F, T>>::ret(func, val, n++);
+				RC rc = templ::counter_func_lambda<templ::is_counter_func_v<F, T>>::ret(std::forward<F>(select_func), val, n++);
 				std::copy(rc.begin(), rc.end(), std::back_inserter(ret));
 			});
 
 			return ret;
 		}
 
-		template <typename F, typename P, typename RC = typename templ::safe_result_of_t<F, T>, typename RC_val = typename templ::value_type_t<RC>, typename R = typename templ::sanitizer_t<P, RC_val, T>>
-		container<R> select_many(F func, P result_selector)
+		template <typename F, typename P, typename RC = typename templ::safe_result_of_t<F, T>, typename RC_val = typename templ::value_type_t<RC>, typename R = typename templ::sanitizer_t<P, RC_val, T>, std::size_t N>
+		container<R> select_many(F&& select_func, P&& result_func, reserve::res_var<N> reserve_amount = reserve::two)
 		{
 			static_assert(!std::is_same<RC, void>::value, "Passed selection functor must have the following signature: RC(T) or RC(T, int), where RC is a container, and T is the type of the contained elements within this container.");
 			static_assert(templ::is_container<RC>::value, "Return type of the passed selection functor must implement begin() and end().");
@@ -690,10 +669,10 @@ namespace cpplinq
 
 			int n = 0;
 
-			std::for_each(begin(), end(), [&n, &ret, &func, &result_selector](T val)
+			std::for_each(begin(), end(), [&n, &ret, select_func = std::forward<F>(select_func), result_func = std::forward<P>(result_func)](T val)
 			{
-				RC rc = templ::pt_lambda<templ::is_counter_func_v<F, T>>::ret(func, val, n++);
-				std::transform(rc.begin(), rc.end(), std::back_inserter(ret), [&result_selector, &val](RC_val rcval) {return result_selector(rcval, val); });
+				RC rc = templ::counter_func_lambda<templ::is_counter_func_v<F, T>>::ret(std::forward<F>(select_func), val, n++);
+				std::transform(rc.begin(), rc.end(), std::back_inserter(ret), [result_func = std::forward<P>(result_func), &val](RC_val rcval) {return result_selector(rcval, val); });
 			});
 
 			return ret;
@@ -737,8 +716,8 @@ namespace cpplinq
 			}
 		}
 
-		template <alloc_mode MemMode = alloc_mode::no_alloc, bool AllowAlloc = (MemMode == alloc_mode::auto_alloc), typename RetVal = typename std::conditional<IsRef && AllowAlloc, container<T>, container<T>&>::type, typename F>
-		RetVal take_while(F func)
+		template <alloc_mode MemMode = alloc_mode::no_alloc, bool AllowAlloc = (MemMode == alloc_mode::auto_alloc), typename RetVal = typename std::conditional<IsRef && AllowAlloc, container<T>, container<T>&>::type, typename F, std::size_t N>
+		RetVal take_while(F&& filter_func, reserve::res_var<N> reserve_amount = reserve::third)
 		{
 			static_assert(templ::is_filter_v<F, T>, "Passed functor must have one of the following signatures: bool(T), bool(T, int), where T is the type of the contained values.");
 			static_assert(!IsRef || AllowAlloc, "Cannot call TakeWhile() on an container created from a referenced container, a Copy() is required first.");
@@ -748,19 +727,19 @@ namespace cpplinq
 			if (IsRef && AllowAlloc)
 			{
 				container<T> ret;
-				ret.reserve(size()); // RESERVE
-				std::copy(begin(), std::find_if_not(begin(), end(), [&func, &n](T val) {return templ::pt_lambda<templ::is_counter_func_v<F, T>>::ret(func, val, n++); }), std::back_inserter(ret));
+				ret.reserve(size() * reserve_amount.value()); // RESERVE
+				std::copy(begin(), std::find_if_not(begin(), end(), [filter_func = std::forward<F>(filter_func), &n](T val) {return templ::counter_func_lambda<templ::is_counter_func_v<F, T>>::ret(fstd::forward<F>(filter_func), val, n++); }), std::back_inserter(ret));
 				return ret;
 			}
 			else
 			{
-				erase(std::find_if_not(begin(), end(), [&func, &n](T val) {return templ::pt_lambda<templ::is_counter_func_v<F, T>>::ret(func, val, n++); }), end());
+				erase(std::find_if_not(begin(), end(), [filter_func = std::forward<F>(filter_func), &n](T val) {return templ::counter_func_lambda<templ::is_counter_func_v<F, T>>::ret(std::forward<F>(filter_func), val, n++); }), end());
 				return *this;
 			}
 		}
 
-		template <alloc_mode MemMode = alloc_mode::no_alloc, bool AllowAlloc = (MemMode == alloc_mode::auto_alloc), typename RetVal = typename std::conditional<IsRef && AllowAlloc, container<T>, container<T>&>::type, typename F>
-		RetVal skip_while(F func)
+		template <alloc_mode MemMode = alloc_mode::no_alloc, bool AllowAlloc = (MemMode == alloc_mode::auto_alloc), typename RetVal = typename std::conditional<IsRef && AllowAlloc, container<T>, container<T>&>::type, typename F, std::size_t N>
+		RetVal skip_while(F&& filter_func, reserve::res_var<N> reserve_amount = reserve::two_thirds)
 		{
 			static_assert(templ::is_filter_v<F, T>, "Passed functor must have one of the following signatures: bool(T), bool(T, int), where T is the type of the contained values.");
 			static_assert(!IsRef || AllowAlloc, "Cannot call SkipWhile() on an container created from a referenced container, a Copy() is required first.");
@@ -770,13 +749,13 @@ namespace cpplinq
 			if (IsRef && AllowAlloc)
 			{
 				container<T> ret;
-				ret.reserve(size()); // RESERVE
-				std::copy(std::find_if_not(begin(), end(), [&func, &n](T val) {return templ::pt_lambda<templ::is_counter_func_v<F, T>>::ret(func, val, n++); }), end(), std::back_inserter(ret));
+				ret.reserve(size() * reserve_amount.value()); // RESERVE
+				std::copy(std::find_if_not(begin(), end(), [filter_func = std::forward<F>(filter_func), &n](T val) {return templ::counter_func_lambda<templ::is_counter_func_v<F, T>>::ret(std::forward<F>(filter_func), val, n++); }), end(), std::back_inserter(ret));
 				return ret;
 			}
 			else
 			{
-				erase(begin(), std::find_if_not(begin(), end(), [&func, &n](T val) {return templ::pt_lambda<templ::is_counter_func_v<F, T>>::ret(func, val, n++); }));
+				erase(begin(), std::find_if_not(begin(), end(), [filter_func = std::forward<F>(filter_func), &n](T val) {return templ::counter_func_lambda<templ::is_counter_func_v<F, T>>::ret(std::forward<F>(filter_func), val, n++); }));
 				return *this;
 			}
 		}
@@ -802,94 +781,105 @@ namespace cpplinq
 		}
 
 		/*=== SET OPERATIONS ===*/
-		// all need the "sorted" thingie to work
-		/*
+		// fuckit we're doing it live
+		
 		template <bool B, typename C, bool C1>
-		self_rettype merge(container<T, B, C, C1>& other)
+		container<T> merge(const container<T, B, C, C1>& other)
 		{
-			static_assert(!IsRef, "Cannot call merge() on a container created from a referenced container, use copy() first.");
+			static_assert(templ::is_sortable<T>::value, "Contained values must define operator< and operator>.");
+			container<T> ret;
+			ret.reserve(size() + other.size());
+			std::merge(begin(), end(), other.begin(), other.end(), std::back_inserter(ret));
+			return ret;
+		}
 
+		template <bool B, typename C, bool C1, typename F>
+		container<T> merge(const container<T, B, C, C1>& other, F&& comparator_func)
+		{
+			static_assert(!std::is_same<typename templ::sanitizer_t<F, T, T>, bool>::value, "Passed functor must have the following signature: bool(T, T).");
 
+			container<T> ret;
+			ret.reserve(size() + other.size());
+			std::merge(begin(), end(), other.begin(), other.end(), std::back_inserter(ret), std::forward<F>(comparator_func));
+			return ret;
 		}
 		
 
-		template <bool B0, typename C, bool B1>
-		container<T> Except(container<T, B0, C, B1> other)
+
+		template <bool B0, typename C, bool B1, std::size_t N1, std::size_t N2>
+		container<T> set_difference(const container<T, B0, C, B1>& other, reserve::res_var<N1> reserve_amount1 = reserve::half, reserve::res_var<N2> reserve_amount2 = reserve::half)
 		{
-			static_assert(!IsContConst, "Cannot call Except() on an container created from a const referenced container, a Copy() is required first.");
-			static_assert(!B1, "Cannot use an container created from a const referenced container as an argument in Except(), a Copy() is required first.");
-			static_assert(templ::is_sortable<T>::value, "Contained values must define greater-than and less-than operators.");
+			static_assert(templ::is_sortable<T>::value, "Contained values must define operator< and operator>.");
 
 			container<T> ret;
-			ret.reserve(size() + other.size() / 2); // RESERVE
-			std::sort(begin(), end());
-			std::sort(other.begin(), other.end());
+			ret.reserve(size() * reserve_amount1.value() + other.size() * reserve_amount2.value()); // RESERVE
 			std::set_difference(begin(), end(), other.begin(), other.end(), std::back_inserter(ret));
 			return ret;
 		}
 
-		template <bool B0, typename C, bool B1>
-		container<T> Intersect(container<T, B0, C, B1> other)
+		template <bool B0, typename C, bool B1, typename F, std::size_t N1, std::size_t N2>
+		container<T> set_difference(const container<T, B0, C, B1>& other, F&& comparator_func, reserve::res_var<N1> reserve_amount1 = reserve::half, reserve::res_var<N2> reserve_amount2 = reserve::half)
 		{
-			static_assert(!IsContConst, "Cannot call Intersect() on an container created from a const referenced container, a Copy() is required first.");
-			static_assert(!B1, "Cannot use an container created from a const referenced container as an argument in Intersect(), a Copy() is required first.");
-			static_assert(!templ::is_sortable<T>::value, "Contained values must define greater-than and less-than operators.");
+			static_assert(!std::is_same<typename templ::sanitizer_t<F, T, T>, bool>::value, "Passed functor must have the following signature: bool(T, T).");
 
 			container<T> ret;
-			ret.reserve(size() + other.size() / 2); // RESERVE
-			std::sort(begin(), end());
-			std::sort(other.begin(), other.end());
-			std::set_intersection(begin(), end(), other.begin(), other.end(), std::back_inserter(ret));
+			ret.reserve(size() * reserve_amount1.value() + other.size() * reserve_amount2.value()); // RESERVE
+			std::set_difference(begin(), end(), other.begin(), other.end(), std::back_inserter(ret), std::forward<F>(comparator_func));
 			return ret;
 		}
 
-		template <bool B0, typename C, bool B1>
-		container<T> Union(container<T, B0, C, B1> other)
+
+
+		template <bool B0, typename C, bool B1, std::size_t N1, std::size_t N2>
+		container<T> set_intersection(const container<T, B0, C, B1>& other, reserve::res_var<N1> reserve_amount1 = reserve::half, reserve::res_var<N2> reserve_amount2 = reserve::half)
 		{
-			static_assert(!IsContConst, "Cannot call Union() on an container created from a const referenced container, a Copy() is required first.");
-			static_assert(!B1, "Cannot use an container created from a const referenced container as an argument in Union(), a Copy() is required first.");
-			static_assert(!templ::is_sortable<T>::value, "Contained values must define greater-than and less-than operators.");
+			static_assert(templ::is_sortable<T>::value, "Contained values must define operator< and operator>.");
 
 			container<T> ret;
-			ret.reserve(size() + other.size()); // RESERVE
-			std::sort(begin(), end());
-			std::sort(other.begin(), other.end());
+			ret.reserve(size() * reserve_amount1.value() + other.size() * reserve_amount2.value()); // RESERVE
+			std::set_difference(begin(), end(), other.begin(), other.end(), std::back_inserter(ret));
+			return ret;
+		}
+
+		template <bool B0, typename C, bool B1, typename F, std::size_t N1, std::size_t N2>
+		container<T> set_intersection(const container<T, B0, C, B1>& other, F&& comparator_func, reserve::res_var<N1> reserve_amount1 = reserve::half, reserve::res_var<N2> reserve_amount2 = reserve::half)
+		{
+			static_assert(!std::is_same<typename templ::sanitizer_t<F, T, T>, bool>::value, "Passed functor must have the following signature: bool(T, T).");
+
+			container<T> ret;
+			ret.reserve(size() * reserve_amount1.value() + other.size() * reserve_amount2.value()); // RESERVE
+			std::set_intersection(begin(), end(), other.begin(), other.end(), std::back_inserter(ret), std::forward<F>(comparator_func));
+			return ret;
+		}
+
+
+
+		template <bool B0, typename C, bool B1, std::size_t N1, std::size_t N2>
+		container<T> set_union(const container<T, B0, C, B1>& other, reserve::res_var<N1> reserve_amount1 = reserve::three_quarters, reserve::res_var<N2> reserve_amount2 = reserve::three_quarters)
+		{
+			static_assert(templ::is_sortable<T>::value, "Contained values must define operator< and operator>.");
+
+			container<T> ret;
+			ret.reserve(size() * reserve_amount1.value() + other.size() * reserve_amount2.value()); // RESERVE
 			std::set_union(begin(), end(), other.begin(), other.end(), std::back_inserter(ret));
 			return ret;
 		}
 
-		template <
-		alloc_mode MemMode = alloc_mode::no_alloc,
-		bool AllowAlloc = (MemMode == alloc_mode::auto_alloc),
-		typename RetVal = typename std::conditional<IsRef && AllowAlloc, container<T>, container<T>&>::type
-		>
-		RetVal Distinct()
+		template <bool B0, typename C, bool B1, typename F, std::size_t N1, std::size_t N2>
+		container<T> set_union(const container<T, B0, C, B1>& other, F&& comparator_func, reserve::res_var<N1> reserve_amount1 = reserve::three_quarters, reserve::res_var<N2> reserve_amount2 = reserve::three_quarters)
 		{
-		static_assert(!IsRef || AllowAlloc, "Cannot call Distinct() on an container created from a referenced container, either a Copy() or specifying cpplinq::mem::auto_alloc as the first template argument is required first.");
-		static_assert(templ::is_comparable<T>::value, "Contained values must define equal and not-equal operators.");
-		static_assert(templ::is_sortable<T>::value, "Contained values must define greater-than and less-than operators.");
+			static_assert(!std::is_same<typename templ::sanitizer_t<F, T, T>, bool>::value, "Passed functor must have the following signature: bool(T, T).");
 
-		if (IsRef && AllowAlloc)
-		{
-		container<T> ret;
-		ret.reserve(size());
-		std::copy(begin(), end(), std::back_inserter(ret));
-		std::sort(ret.begin(), ret.end());
-		ret.erase(std::unique(ret.begin(), ret.end()), ret.end());
-		return ret;
+			container<T> ret;
+			ret.reserve(size() * reserve_amount1.value() + other.size() * reserve_amount2.value()); // RESERVE
+			std::set_union(begin(), end(), other.begin(), other.end(), std::back_inserter(ret), std::forward<F>(comparator_func));
+			return ret;
 		}
-		else
-		{
-		std::sort(begin(), end());
-		erase(std::unique(begin(), end()), end());
-		return *this;
-		}
-		}*/
-
+		
 		/*=== MIN/MAX OPERATIONS ===*/
 
 		template <typename F, typename N = typename templ::sanitizer_t<F, T>>
-		N average(F func) const
+		N average(F&& number_func) const
 		{
 			static_assert(!std::is_void<N>::value, "Passed functor must have the following signature: N(T), where N is any arithmetic type.");
 			static_assert(std::is_arithmetic<N>::value, "Passed functor must return an arithmetic type.");
@@ -897,8 +887,8 @@ namespace cpplinq
 			if (this->size() == 0) { throw std::logic_error("container<T>::average(F func) | container<T> is empty."); }
 
 			N val = N(0);
-			std::for_each(this->begin(), this->end(), [&val, &func](T v) {val += func(v); });
-			return val / this->size();
+			std::for_each(begin(), end(), [&val, number_func = std::forward<F>(number_func)](T v) {val += number_func(v); });
+			return val / size();
 		}
 
 		T average() const
@@ -907,21 +897,21 @@ namespace cpplinq
 			if (this->size() == 0) { throw std::logic_error("container<T>::Average() | container<T> is empty."); }
 
 			T val = T(0);
-			std::for_each(this->begin(), this->end(), [&val](T v) {val += v; });
-			return val / this->size();
+			std::for_each(begin(), end(), [&val](T v) {val += v; });
+			return val / size();
 		}
 
 		template <typename F, typename N = typename templ::sanitizer_t<F, T>>
-		N max(F func) const
+		N max(F&& number_func) const
 		{
 			static_assert(!std::is_void<N>::value, "Passed functor must have the following signature: N(T), where N is any arithmetic type.");
 			static_assert(std::is_arithmetic<N>::value, "Passed functor must return an arithmetic type.");
 
-			if (this->size() == 0) { throw std::logic_error("container<T>::Max(F func) | container<T> is empty."); }
+			if (size() == 0) { throw std::logic_error("container<T>::Max(F func) | container<T> is empty."); }
 
 			N val;
 			bool first = false;
-			std::for_each(this->begin(), this->end(), [&val, &first, &func](T v) {if (!first) { first = true; val = func(v); } else { val = std::max(val, func(v)); }});
+			std::for_each(begin(), end(), [&val, &first, number_func = std::forward<F>(number_func)](T v) {if (!first) { first = true; val = number_func(v); } else { val = std::max(val, number_func(v)); }});
 			return val;
 		}
 
@@ -933,21 +923,21 @@ namespace cpplinq
 
 			T val;
 			bool first = false;
-			std::for_each(this->begin(), this->end(), [&val, &first](T v) {if (!first) { first = true; val = v; } else { val = std::max(val, v); }});
+			std::for_each(begin(), end(), [&val, &first](T v) {if (!first) { first = true; val = v; } else { val = std::max(val, v); }});
 			return val;
 		}
 
 		template <typename F, typename N = typename templ::sanitizer_t<F, T>>
-		N min(F func) const
+		N min(F&& number_func) const
 		{
 			static_assert(!std::is_void<N>::value, "Passed functor must have the following signature: N(T), where N is any arithmetic type.");
 			static_assert(std::is_arithmetic<N>::value, "Passed functor must return an arithmetic type.");
 
-			if (this->size() == 0) { throw std::logic_error("container<T>::Min(F func) | container<T> is empty."); }
+			if (size() == 0) { throw std::logic_error("container<T>::Min(F func) | container<T> is empty."); }
 
 			N val;
 			bool first = false;
-			std::for_each(this->begin(), this->end(), [&val, &first, &func](T v) {if (!first) { first = true; val = func(v); } else { val = std::min(val, func(v)); }});
+			std::for_each(begin(), end(), [&val, &first, number_func = std::forward<F>(number_func)](T v) {if (!first) { first = true; val = number_func(v); } else { val = std::min(val, number_func(v)); }});
 			return val;
 		}
 
@@ -955,25 +945,25 @@ namespace cpplinq
 		{
 			static_assert(std::is_arithmetic<T>::value, "T must be an arithmetic type.");
 
-			if (this->size() == 0) { throw std::logic_error("container<T>::Min() | container<T> is empty."); }
+			if (size() == 0) { throw std::logic_error("container<T>::Min() | container<T> is empty."); }
 
 			T val;
 			bool first = false;
-			std::for_each(this->begin(), this->end(), [&val, &first](T v) {if (!first) { first = true; val = v; } else { val = std::min(val, v); }});
+			std::for_each(begin(), end(), [&val, &first](T v) {if (!first) { first = true; val = v; } else { val = std::min(val, v); }});
 			return val;
 		}
 
 		template <typename F, typename N = typename templ::sanitizer_t<F, T>>
-		std::pair<N, N> minmax(F func) const
+		std::pair<N, N> minmax(F&& number_func) const
 		{
 			static_assert(!std::is_void<N>::value, "Passed functor must have the following signature: N(T), where N is any arithmetic type.");
 			static_assert(std::is_arithmetic<N>::value, "Passed functor must return an arithmetic type.");
 
-			if (this->size() == 0) { throw std::logic_error("container<T>::Min(F func) | container<T> is empty."); }
+			if (size() == 0) { throw std::logic_error("container<T>::Min(F func) | container<T> is empty."); }
 
 			N min, max;
 			bool first = false;
-			std::for_each(this->begin(), this->end(), [&min, &max, &first, &func](T v) {if (!first) { first = true; min = func(v); max = func(v); } else { min = std::min(min, func(v));  max = std::max(max, func(v)); }});
+			std::for_each(begin(), end(), [&min, &max, &first, number_func = std::forward<F>(number_func)](T v) {if (!first) { first = true; min = number_func(v); max = number_func(v); } else { auto v = number_func(v);  min = std::min(min, v);  max = std::max(max, v); }});
 			return std::make_pair(min, max);
 		}
 
@@ -981,11 +971,11 @@ namespace cpplinq
 		{
 			static_assert(std::is_arithmetic<T>::value, "T must be an arithmetic type.");
 
-			if (this->size() == 0) { throw std::logic_error("container<T>::Min() | container<T> is empty."); }
+			if (size() == 0) { throw std::logic_error("container<T>::Min() | container<T> is empty."); }
 
 			T min, max;
 			bool first = false;
-			std::for_each(this->begin(), this->end(), [&min, &max, &first](T v) {if (!first) { first = true; min = v; max = v; } else { min = std::min(min, v); max = std::max(max, v);}});
+			std::for_each(begin(), end(), [&min, &max, &first](T v) {if (!first) { first = true; min = v; max = v; } else { min = std::min(min, v); max = std::max(max, v);}});
 			return std::make_pair(min, max);
 		}
 
@@ -1010,19 +1000,19 @@ namespace cpplinq
 		}
 
 		template <bool B, typename C, bool C1>
-		bool is_permutation(container<T, B, C, C1>& other)
+		bool is_permutation(const container<T, B, C, C1>& other)
 		{
 			static_assert(templ::is_comparable_v<T>, "T must implement operator== and operator!=.");
 
 			return std::is_permutation(begin(), end(), other.begin(), other.end());
 		}
 
-		template <typename F, typename R = typename templ::sanitizer_t<F, T, T>, bool B, typename C, bool C1 >
-		bool is_permutation(F&& comparator_func, container<T, B, C, C1>& other)
+		template <typename F, bool B, typename C, bool C1 >
+		bool is_permutation(F&& comparator_func, const container<T, B, C, C1>& other)
 		{
-			static_assert(!std::is_same<R, bool>::value, "Passed functor must have the following signature: bool(T, T).");
+			static_assert(!std::is_same<typename templ::sanitizer_t<F, T, T>, bool>::value, "Passed functor must have the following signature: bool(T, T).");
 
-			return std::is_permutation(begin(), end(), other.begin(), other.end(), std::forward(comparator_func));
+			return std::is_permutation(begin(), end(), other.begin(), other.end(), std::forward<F>(comparator_func));
 		}
 
 		/*=== NUMERIC OPERATIONS ===*/
@@ -1032,7 +1022,7 @@ namespace cpplinq
 		{
 			static_assert(!std::is_void<templ::sanitizer_t<F, T, T, T>>::value, "Passed functor must have one of the following signatures: T(T, T), V(V, T), where V is any complete type.");
 
-			return std::accumulate(begin(), end(), T(), std::forward(accumulating_func));
+			return std::accumulate(begin(), end(), T(), std::forward<F>(accumulating_func));
 		}
 
 		template <typename F, typename V>
@@ -1040,35 +1030,36 @@ namespace cpplinq
 		{
 			static_assert(!std::is_void<templ::sanitizer_t<F, V, V, T>>::value, "Passed functor must have one of the following signatures: T(T, T), V(V, T), where V is any complete type.");
 
-			return std::accumulate(this->begin(), this->end(), initial_val, std::forward(accumulating_func));
+			return std::accumulate(begin(), end(), initial_val, std::forward<F>(accumulating_func));
 		}
 
 		template <typename F, typename R, typename V, typename E = templ::sanitizer_t<R, V>>
-		E accumulate(V initial_val, F&& accumulating_func, R return_func)
+		E accumulate(V initial_val, F&& accumulating_func, R&& return_func)
 		{
 			static_assert(!std::is_void<typename templ::sanitizer_t<F, V, V, T>>::value, "Passed functor must have the following signature: V(V, T), where V is any complete type.");
 			static_assert(!std::is_void<E>::value, "Passed return functor must have the following signature: E(V), where E is any complete type and V is the type returned by the accumulating functor.");
 
-			return return_func(std::accumulate(this->begin(), this->end(), initial_val, std::forward(accumulating_func)));
+			return return_func(std::accumulate(begin(), end(), initial_val, std::forward<F>(accumulating_func)));
 		}
 		
 		template <bool B, typename C, bool C1, typename F1, typename F2, typename V, typename R = typename templ::sanitizer_t<F2, T, T>>
 		V inner_product(const container<T, B, C, C1>& other, V starting_val, F1&& func1, F2&& func2)
 		{
 			static_assert(!std::is_void<R>::value, "Second passed functor must have the following signature: R(T, T), where R is any complete type.");
-			static_assert(!std::is_void<typename templ::sanitizer_t<F1, V, R>>::value, "First passed functor must have the following signature: V(V, R), where V is the type of the passed initial value, and R is the type returned by the second passed functor.");
+			static_assert(std::is_same<typename templ::sanitizer_t<F1, V, R>, V>::value, "First passed functor must have the following signature: V(V, R), where V is the type of the passed initial value, and R is the type returned by the second passed functor.");		
 
-			return std::inner_product(begin(), begin() + std::min(size(), other.size()), other.begin(), starting_val, std::forward(func1), std::forward(func2));
-		}
-		/*
-		template <bool B, typename C, bool C1, typename V>
+			return std::inner_product(begin(), begin() + std::min(size(), other.size()), other.begin(), starting_val, std::forward<F1>(func1), std::forward<F2>(func2));
+		}	
+		
+		template <bool B, typename C, bool C1, typename V, typename R = typename templ::sanitizer_t<templ::mul<T, T>, T, T>>
 		V inner_product(const container<T, B, C, C1>& other, V starting_val)
 		{
-			//static_assert(!std::is_void_v<V>, "Second passed functor must have the following signature: R(T, T), where R is any complete type.");
-			//static_assert(!std::is_void_v<typename templ::sanitizer_t<F1, V, typename templ::sanitizer_t<F2, T, T>>>, "First passed functor must have the following signature: V(V, R), where V is any complete type, and R is the type returned by the second passed functor.");
-			//TODO add addable and multiplicable stuff
+			static_assert(!std::is_void<R>::value, "The contained type must define operator* with itself.");
+			static_assert(!std::is_void<templ::sanitizer_t<templ::plus<V, R>, V, R>>::value, "The result of operator* of the contained type with itself must be addable to the passed starting value and produce a value of the same type as the starting value.");
+			static_assert(!std::is_same<V, templ::sanitizer_t<templ::plus<V, R>, V, R>>::value, "The result of operator* of the contained type with itself must be addable to the passed starting value and produce a value of the same type as the starting value.");
+
 			return std::inner_product(begin(), begin() + std::min(size(), other.size()), other.begin(), starting_val);
-		}*/
+		}
 
 		/*=== GENERATION OPERATORS ===*/
 
@@ -1094,7 +1085,7 @@ namespace cpplinq
 
 		template <alloc_mode MemMode = alloc_mode::no_alloc, bool AllowAlloc = (MemMode == alloc_mode::auto_alloc), typename RetVal = typename std::conditional<IsRef && AllowAlloc, container<T>, container<T>&>::type
 		>
-		RetVal default_if_empty(T val)
+		RetVal default_if_empty(const T& val)
 		{
 			static_assert(!IsRef || AllowAlloc, "Cannot call DefaultIfEmpty() on an container created from a referenced container, a Copy() is required first.");
 
@@ -1118,20 +1109,22 @@ namespace cpplinq
 			return container<T>();
 		}
 
-		static container<T> range(T init, std::size_t count, T inc = T(1))
+		static container<T> range(const T& init, std::size_t count, const T& inc = T(1))
 		{
 			container<T> ret;
 
+			T val = init;
+
 			for (std::size_t i = 0; i < count; i++)
 			{
-				ret.push_back(init);
-				init += inc;
+				ret.push_back(val);
+				val += inc;
 			}
 
 			return ret;
 		}
 
-		static container<T> repeat(T val, std::size_t count)
+		static container<T> repeat(const T& val, std::size_t count)
 		{
 			container<T> ret;
 			for (std::size_t i = 0; i < count; i++)
@@ -1162,11 +1155,11 @@ namespace cpplinq
 		}
 
 		template <typename F>
-		T first(F&& func) 
+		T first(F&& selector_func)
 		{
 			static_assert(templ::is_filter_v<F, T>, "The passed functor must have the following signature: bool(T).");
 
-			auto v = std::find_if(begin(), end(), std::forward(func));
+			auto v = std::find_if(begin(), end(), std::forward<F>(selector_func));
 			if (v == end())
 			{
 				throw std::length_error("container<T>::first(F func) | No element satisfies the selection function.");
@@ -1181,11 +1174,11 @@ namespace cpplinq
 		}
 
 		template <typename F>
-		T first_or_default(F&& func) 
+		T first_or_default(F&& selector_func)
 		{
 			static_assert(templ::is_filter_v<F, T>, "The passed functor must have the following signature: bool(T).");
 
-			auto v = std::find_if(begin(), end(), std::forward(func));
+			auto v = std::find_if(begin(), end(), std::forward<F>(selector_func));
 			if (v == end())
 			{
 				return T();
@@ -1200,12 +1193,12 @@ namespace cpplinq
 		}
 
 		template <typename F>
-		T last(F&& func) 
+		T last(F&& selector_func)
 		{
 			static_assert(templ::is_filter_v<F, T>, "The passed functor must have the following signature: bool(T).");
 
 			auto v = end();
-			while (--v, !(func(*(v)) || v == begin()));
+			while (--v, !(selector_func(*(v)) || v == begin()));
 
 			if (v == begin())
 			{
@@ -1221,12 +1214,12 @@ namespace cpplinq
 		}
 
 		template <typename F>
-		T last_or_default(F&& func) 
+		T last_or_default(F&& selector_func)
 		{
 			static_assert(templ::is_filter_v<F, T>, "The passed functor must have the following signature: bool(T).");
 
 			auto v = end();
-			while (--v, !(func(*(v)) || v == begin()));
+			while (--v, !(selector_func(*(v)) || v == begin()));
 
 			if (v == begin())
 			{
@@ -1242,16 +1235,16 @@ namespace cpplinq
 		}
 
 		template <typename F>
-		T single(F&& func) 
+		T single(F&& selector_func)
 		{
 			static_assert(templ::is_filter_v<F, T>, "The passed functor must have the following signature: bool(T).");
 
 			T retval;
 			int n = 0;
 
-			std::for_each(begin(), end(), [&retval, &func, &n](T val)
+			std::for_each(begin(), end(), [&retval, selector_func = std::forward<F>(selector_func), &n](T val)
 			{
-				if (func(val))
+				if (selector_func(val))
 				{
 					if (n == 0) { n++; retval = val; }
 					else
@@ -1298,8 +1291,8 @@ namespace cpplinq
 
 		/*=== JOIN OPERATORS ===*/
 
-		template <bool B0, class C, bool B1, typename FOuterKey, typename FInnerKey, typename FJoin, typename TInner, typename TKey = typename templ::sanitizer_t<FOuterKey, T>, typename TJoined = typename templ::sanitizer_t<FJoin, T, TInner>>
-		container<TJoined> join(const container<TInner, B0, C, B1>& innerkeys, FOuterKey outerkeyselector, FInnerKey innerkeyselector, FJoin joiner)
+		template <bool B0, class C, bool B1, typename FOuterKey, typename FInnerKey, typename FJoin, typename TInner, typename TKey = typename templ::sanitizer_t<FOuterKey, T>, typename TJoined = typename templ::sanitizer_t<FJoin, T, TInner>, std::size_t N>
+		container<TJoined> join(const container<TInner, B0, C, B1>& innerkeys, FOuterKey&& outerkeyselector, FInnerKey&& innerkeyselector, FJoin&& joiner, reserve::res_var<N> reserve_amount = reserve::one)
 		{
 			static_assert(!std::is_same<TKey, void>::value, "Passed outer key selector must have the following signature: TKey(T), where TKey is any type implementing operator== and operator!= and T is the type of the values contained within this container.");
 			static_assert(!templ::is_comparable_v<TKey>, "The values returned by the outer key selector must implement operator== and operator!=.");
@@ -1310,10 +1303,10 @@ namespace cpplinq
 
 			std::vector<std::pair<TKey, TInner>> innervals;
 			innervals.reserve(size()); // RESERVE unchangable
-			ret.reserve(size()); // RESERVE
+			ret.reserve(size() * reserve_amount.value()); // RESERVE
 			
-			std::for_each(innerkeys.begin(), innerkeys.end(), [&innervals, &innerkeyselector](TInner innerval) {innervals.push_back(std::make_pair(innerkeyselector(innerval), innerval)); });
-			std::for_each(begin(), end(), [&innervals, &outerkeyselector, &joiner, &ret](T outerval)
+			std::for_each(innerkeys.begin(), innerkeys.end(), [&innervals, innerkeyselector = std::forward<FInnerKey>(innerkeyselector)](TInner innerval) {innervals.push_back(std::make_pair(innerkeyselector(innerval), innerval)); });
+			std::for_each(begin(), end(), [&innervals, outerkeyselector = std::forward<FOuterKey>(outerkeyselector), joiner = std::forward<FJoin>(joiner), &ret](T& outerval)
 			{
 				TKey key = outerkeyselector(outerval);
 				auto iter = std::find_if(innervals.begin(), innervals.end(), [&key](std::pair<TKey, TInner> p) {return key == p.first; });
@@ -1326,8 +1319,8 @@ namespace cpplinq
 			return ret;
 		}
 
-		template <bool B0, class C, bool B1, typename FOuterKey, typename FInnerKey, typename FJoin, typename TInner, typename TKey = typename templ::sanitizer_t<FOuterKey, T>, typename TJoined = typename templ::sanitizer_t<FJoin, T, templ::dummy_iterator_t<TInner>, templ::dummy_iterator_t<TInner>>>
-		container<TJoined> group_join(const container<TInner, B0, C, B1>& innerkeys, FOuterKey outerkeyselector, FInnerKey innerkeyselector, FJoin joiner)
+		template <bool B0, class C, bool B1, typename FOuterKey, typename FInnerKey, typename FJoin, typename TInner, typename TKey = typename templ::sanitizer_t<FOuterKey, T>, typename TJoined = typename templ::sanitizer_t<FJoin, T, templ::vector_iterator_t<TInner>, templ::vector_iterator_t<TInner>>, std::size_t N>
+		container<TJoined> group_join(const container<TInner, B0, C, B1>& innerkeys, FOuterKey&& outerkeyselector, FInnerKey&& innerkeyselector, FJoin&& joiner, reserve::res_var<N> reserve_amount = reserve::one)
 		{
 			static_assert(!std::is_same<TKey, void>::value, "Passed outer key selector must have the following signature: TKey(T), where TKey is any type implementing operator== and operator!= and T is the type of the values contained within this container.");
 			static_assert(!templ::is_comparable_v<TKey>, "The values returned by the outer key selector must implement operator== and operator!=.");
@@ -1337,11 +1330,11 @@ namespace cpplinq
 			container<TJoined> ret;
 
 			std::vector<std::pair<TKey, TInner>> innervals;
-			ret.reserve(size()); // RESERVE
-			innervals.reserve(size()); // RESERVE
+			ret.reserve(size() * reserve_amount.value()); // RESERVE
+			innervals.reserve(size()); // RESERVE, unchangable
 
-			std::for_each(innerkeys.begin(), innerkeys.end(), [&innervals, &innerkeyselector](TInner innerval) {innervals.push_back(std::make_pair(innerkeyselector(innerval), innerval)); });
-			std::for_each(begin(), end(), [&innervals, &outerkeyselector, &joiner, &ret](T outerval)
+			std::for_each(innerkeys.begin(), innerkeys.end(), [&innervals, innerkeyselector = std::forward<FInnerKey>(innerkeyselector)](TInner innerval) {innervals.push_back(std::make_pair(innerkeyselector(innerval), innerval)); });
+			std::for_each(begin(), end(), [&innervals, outerkeyselector = std::forward<FOuterKey>(outerkeyselector), joiner = std::forward<FJoin>(joiner), &ret](T outerval)
 			{
 				TKey key = outerkeyselector(outerval);
 				std::vector<TInner> block;
@@ -1364,7 +1357,7 @@ namespace cpplinq
 
 			container<R> ret;
 			ret.reserve(size()); // RESERVE
-			std::transform(begin(), end(), std::back_inserter(ret), [](T val) {return (R)val; });
+			std::transform(begin(), end(), std::back_inserter(ret), [](const T& val) {return static_cast<R>(val); });
 			return ret;
 		}
 
@@ -1417,28 +1410,26 @@ namespace cpplinq
 		}
 
 		template <typename F, typename K = typename templ::sanitizer_t<F, T>>
-		std::map<K, T> to_map(F&& func)
+		std::map<K, T> to_map(F&& key_func)
 		{
 			static_assert(!std::is_void<K>::value, "Passed functor must have the following signature: K(T), where K is any type.");
 
 			std::map<K, T> ret;
 			ret.reserve(size()); // RESERVE
-			std::for_each(begin(), end(), [&ret, &func](T val) {ret[func(val)] = val; });
+			std::for_each(begin(), end(), [&ret, key_func = std::forward<F>(key_func)](T val) {ret[key_func(val)] = val; });
 			return ret;
 		}
 
 		template <typename F, typename K = typename templ::sanitizer_t<F, T>>
-		std::unordered_map<K, T> to_unordered_map(F&& func)
+		std::unordered_map<K, T> to_unordered_map(F&& key_func)
 		{
 			static_assert(!std::is_void<K>::value, "Passed functor must have the following signature: K(T), where K is any type.");
 
 			std::unordered_map<K, T> ret;
 			ret.reserve(size()); // RESERVE
-			std::for_each(begin(), end(), [&ret, &func](T val) {ret[func(val)] = val; });
+			std::for_each(begin(), end(), [&ret, key_func = std::forward<F>(key_func)](T val) {ret[key_func(val)] = val; });
 			return ret;
 		}
-
-		
 	};
 
 	template <typename Cont, bool Const = std::is_const<Cont>::value, typename T = typename std::decay<decltype(*(std::declval<Cont>().begin()))>::type>
@@ -1448,8 +1439,7 @@ namespace cpplinq
 		return container<T, true, Cont, Const>(cont);
 	}
 
-
-	template <typename Cont, typename T = typename std::decay<decltype(*(std::declval<Cont>().begin()))>::type, typename _A = typename std::enable_if<!std::is_lvalue_reference<Cont>::value>::type>
+	template <typename Cont, typename T = typename templ::value_type_t<Cont>, typename _A = typename std::enable_if<!std::is_lvalue_reference<Cont>::value>::type>
 	container<T> LINQ(Cont&& cont)
 	{
 		static_assert(std::is_same<decltype(*(std::declval<Cont>().begin())), decltype(*(std::declval<Cont>().end()))>::value, "Types of begin() and end() iterators must be the same.");

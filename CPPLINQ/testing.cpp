@@ -28,6 +28,7 @@ TEST_CASE("IEnumerable constuction", "[IEnumerable]")
 	{
 		auto cont_move_ienumerable = LINQ(std::move(test_list_move));
 
+
 		REQUIRE(cont_move_ienumerable.to_vector() == test_vector_copy);
 	}
 }
