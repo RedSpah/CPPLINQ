@@ -622,7 +622,7 @@ namespace cpplinq
 			static_assert(!IsRef, "Cannot call unique() on a container created from a referenced container, use unique_copy() instead.");
 			static_assert(templ::is_comparable_v<T>, "T must implement operator== and operator!=.");
 
-			std::erase(std::unique(begin(), end()), end());
+			erase(std::unique(begin(), end()), end());
 			return *this;
 		}
 
@@ -728,7 +728,7 @@ namespace cpplinq
 			{
 				container<T> ret;
 				ret.reserve(size() * reserve_amount.value()); // RESERVE
-				std::copy(begin(), std::find_if_not(begin(), end(), [filter_func = std::forward<F>(filter_func), &n](T val) {return templ::counter_func_lambda<templ::is_counter_func_v<F, T>>::ret(fstd::forward<F>(filter_func), val, n++); }), std::back_inserter(ret));
+				std::copy(begin(), std::find_if_not(begin(), end(), [filter_func = std::forward<F>(filter_func), &n](T val) {return templ::counter_func_lambda<templ::is_counter_func_v<F, T>>::ret(std::forward<F>(filter_func), val, n++); }), std::back_inserter(ret));
 				return ret;
 			}
 			else
@@ -963,7 +963,7 @@ namespace cpplinq
 
 			N min, max;
 			bool first = false;
-			std::for_each(begin(), end(), [&min, &max, &first, number_func = std::forward<F>(number_func)](T v) {if (!first) { first = true; min = number_func(v); max = number_func(v); } else { auto v = number_func(v);  min = std::min(min, v);  max = std::max(max, v); }});
+			std::for_each(begin(), end(), [&min, &max, &first, number_func = std::forward<F>(number_func)](T v) {if (!first) { first = true; min = number_func(v); max = number_func(v); } else { auto num = number_func(v);  min = std::min(min, num);  max = std::max(max, num); }});
 			return std::make_pair(min, max);
 		}
 
