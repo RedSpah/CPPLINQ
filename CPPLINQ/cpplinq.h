@@ -74,7 +74,7 @@ namespace cpplinq
 		template <typename T1, typename T2> struct plus { template <typename R = decltype(std::declval<T1>() + std::declval<T2>())> constexpr R operator()(const T1& L_, const T2& R_) { return L_ + R_; } using type = decltype(std::declval<T1>() + std::declval<T2>());};
 		template <typename T1, typename T2> struct mul { template <typename R = decltype(std::declval<T1>() * std::declval<T2>())> constexpr R operator()(const T1& L_, const T2& R_) { return L_ * R_; } using type = decltype(std::declval<T1>() * std::declval<T2>()); };
 
-		template <typename T1, typename T2> constexpr bool is_addable_v = is_defined_v<plus<>, T1, T2>;
+		template <typename T1, typename T2> constexpr bool is_addable_v = is_defined_v<plus<T1, T2>, T1, T2>;
 		//template <typename T> constexpr bool is_addable_v = is_defined_v<std::plus<>, T, T>;
 		template <typename T> constexpr bool is_multiplicative_v = is_defined_v<std::multiplies<>, T, T>;
 		template <typename T> constexpr bool is_sortable_v = is_defined_v<std::less<>, T, T> || is_defined_v<std::greater<>, T, T>;
