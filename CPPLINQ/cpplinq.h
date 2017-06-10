@@ -410,7 +410,7 @@ namespace cpplinq
 		}
 
 		template <typename F, std::size_t N>
-		container<T> copy_if(F&& filter_func, reserve::res_var<N> reserve_amount = reserve::half)
+		container<T> copy_if(F&& filter_func, reserve::res_var<N> reserve_amount = reserve::half())
 		{
 			static_assert(templ::is_filter_v<F, T>, "Passed functor must have one of the following signatures: bool(T) or bool(T, int), where T is the type of the contained values.");
 
@@ -431,7 +431,7 @@ namespace cpplinq
 		}
 
 		template <alloc_mode MemMode = alloc_mode::no_alloc, bool AllowAlloc = (MemMode == alloc_mode::auto_alloc), typename RetVal = typename std::conditional<IsRef && AllowAlloc, container<T>, container<T>&>::type, typename F, std::size_t N>
-		RetVal where(F&& filter_func, reserve::res_var<N> reserve_amount = reserve::half)
+		RetVal where(F&& filter_func, reserve::res_var<N> reserve_amount = reserve::half())
 		{
 			static_assert(templ::is_filter_v<F, T>, "Passed functor must have one of the following signatures: bool(T) or bool(T, int), where T is the type of the contained values.");
 			static_assert(!IsRef || AllowAlloc, "Cannot call Where() on an container created from a referenced container, either a Copy() or specifying cpplinq::mem::auto_alloc as the first template argument is required first.");
@@ -627,7 +627,7 @@ namespace cpplinq
 		}
 
 		template <std::size_t N>
-		container<T> unique_copy(reserve::res_var<N> reserve_amount = reserve::half)
+		container<T> unique_copy(reserve::res_var<N> reserve_amount = reserve::half())
 		{
 			static_assert(templ::is_comparable_v<T>, "T must implement operator== and operator!=.");
 
@@ -638,7 +638,7 @@ namespace cpplinq
 		}
 
 		template <typename F, typename RC = typename templ::safe_result_of_t<F, T>, typename R = typename templ::value_type_t<RC>, std::size_t N>
-		container<R> select_many(F&& select_func, reserve::res_var<N> reserve_amount = reserve::two)
+		container<R> select_many(F&& select_func, reserve::res_var<N> reserve_amount = reserve::two())
 		{
 			static_assert(!std::is_same<RC, void>::value, "Passed selection functor must have the following signature: RC(T) or RC(T, int), where RC is a container, and T is the type of the contained elements within this container.");
 			static_assert(!templ::is_container<RC>::value, "Return type of the passed functor must implement begin() and end().");
@@ -658,7 +658,7 @@ namespace cpplinq
 		}
 
 		template <typename F, typename P, typename RC = typename templ::safe_result_of_t<F, T>, typename RC_val = typename templ::value_type_t<RC>, typename R = typename templ::sanitizer_t<P, RC_val, T>, std::size_t N>
-		container<R> select_many(F&& select_func, P&& result_func, reserve::res_var<N> reserve_amount = reserve::two)
+		container<R> select_many(F&& select_func, P&& result_func, reserve::res_var<N> reserve_amount = reserve::two())
 		{
 			static_assert(!std::is_same<RC, void>::value, "Passed selection functor must have the following signature: RC(T) or RC(T, int), where RC is a container, and T is the type of the contained elements within this container.");
 			static_assert(templ::is_container<RC>::value, "Return type of the passed selection functor must implement begin() and end().");
@@ -717,7 +717,7 @@ namespace cpplinq
 		}
 
 		template <alloc_mode MemMode = alloc_mode::no_alloc, bool AllowAlloc = (MemMode == alloc_mode::auto_alloc), typename RetVal = typename std::conditional<IsRef && AllowAlloc, container<T>, container<T>&>::type, typename F, std::size_t N>
-		RetVal take_while(F&& filter_func, reserve::res_var<N> reserve_amount = reserve::third)
+		RetVal take_while(F&& filter_func, reserve::res_var<N> reserve_amount = reserve::third())
 		{
 			static_assert(templ::is_filter_v<F, T>, "Passed functor must have one of the following signatures: bool(T), bool(T, int), where T is the type of the contained values.");
 			static_assert(!IsRef || AllowAlloc, "Cannot call TakeWhile() on an container created from a referenced container, a Copy() is required first.");
@@ -739,7 +739,7 @@ namespace cpplinq
 		}
 
 		template <alloc_mode MemMode = alloc_mode::no_alloc, bool AllowAlloc = (MemMode == alloc_mode::auto_alloc), typename RetVal = typename std::conditional<IsRef && AllowAlloc, container<T>, container<T>&>::type, typename F, std::size_t N>
-		RetVal skip_while(F&& filter_func, reserve::res_var<N> reserve_amount = reserve::two_thirds)
+		RetVal skip_while(F&& filter_func, reserve::res_var<N> reserve_amount = reserve::two_thirds())
 		{
 			static_assert(templ::is_filter_v<F, T>, "Passed functor must have one of the following signatures: bool(T), bool(T, int), where T is the type of the contained values.");
 			static_assert(!IsRef || AllowAlloc, "Cannot call SkipWhile() on an container created from a referenced container, a Copy() is required first.");
@@ -807,7 +807,7 @@ namespace cpplinq
 
 
 		template <bool B0, typename C, bool B1, std::size_t N1, std::size_t N2>
-		container<T> set_difference(const container<T, B0, C, B1>& other, reserve::res_var<N1> reserve_amount1 = reserve::half, reserve::res_var<N2> reserve_amount2 = reserve::half)
+		container<T> set_difference(const container<T, B0, C, B1>& other, reserve::res_var<N1> reserve_amount1 = reserve::half(), reserve::res_var<N2> reserve_amount2 = reserve::half())
 		{
 			static_assert(templ::is_sortable<T>::value, "Contained values must define operator< and operator>.");
 
@@ -818,7 +818,7 @@ namespace cpplinq
 		}
 
 		template <bool B0, typename C, bool B1, typename F, std::size_t N1, std::size_t N2>
-		container<T> set_difference(const container<T, B0, C, B1>& other, F&& comparator_func, reserve::res_var<N1> reserve_amount1 = reserve::half, reserve::res_var<N2> reserve_amount2 = reserve::half)
+		container<T> set_difference(const container<T, B0, C, B1>& other, F&& comparator_func, reserve::res_var<N1> reserve_amount1 = reserve::half(), reserve::res_var<N2> reserve_amount2 = reserve::half())
 		{
 			static_assert(!std::is_same<typename templ::sanitizer_t<F, T, T>, bool>::value, "Passed functor must have the following signature: bool(T, T).");
 
@@ -831,7 +831,7 @@ namespace cpplinq
 
 
 		template <bool B0, typename C, bool B1, std::size_t N1, std::size_t N2>
-		container<T> set_intersection(const container<T, B0, C, B1>& other, reserve::res_var<N1> reserve_amount1 = reserve::half, reserve::res_var<N2> reserve_amount2 = reserve::half)
+		container<T> set_intersection(const container<T, B0, C, B1>& other, reserve::res_var<N1> reserve_amount1 = reserve::half(), reserve::res_var<N2> reserve_amount2 = reserve::half())
 		{
 			static_assert(templ::is_sortable<T>::value, "Contained values must define operator< and operator>.");
 
@@ -842,7 +842,7 @@ namespace cpplinq
 		}
 
 		template <bool B0, typename C, bool B1, typename F, std::size_t N1, std::size_t N2>
-		container<T> set_intersection(const container<T, B0, C, B1>& other, F&& comparator_func, reserve::res_var<N1> reserve_amount1 = reserve::half, reserve::res_var<N2> reserve_amount2 = reserve::half)
+		container<T> set_intersection(const container<T, B0, C, B1>& other, F&& comparator_func, reserve::res_var<N1> reserve_amount1 = reserve::half(), reserve::res_var<N2> reserve_amount2 = reserve::half())
 		{
 			static_assert(!std::is_same<typename templ::sanitizer_t<F, T, T>, bool>::value, "Passed functor must have the following signature: bool(T, T).");
 
@@ -855,7 +855,7 @@ namespace cpplinq
 
 
 		template <bool B0, typename C, bool B1, std::size_t N1, std::size_t N2>
-		container<T> set_union(const container<T, B0, C, B1>& other, reserve::res_var<N1> reserve_amount1 = reserve::three_quarters, reserve::res_var<N2> reserve_amount2 = reserve::three_quarters)
+		container<T> set_union(const container<T, B0, C, B1>& other, reserve::res_var<N1> reserve_amount1 = reserve::three_quarters(), reserve::res_var<N2> reserve_amount2 = reserve::three_quarters())
 		{
 			static_assert(templ::is_sortable<T>::value, "Contained values must define operator< and operator>.");
 
@@ -866,7 +866,7 @@ namespace cpplinq
 		}
 
 		template <bool B0, typename C, bool B1, typename F, std::size_t N1, std::size_t N2>
-		container<T> set_union(const container<T, B0, C, B1>& other, F&& comparator_func, reserve::res_var<N1> reserve_amount1 = reserve::three_quarters, reserve::res_var<N2> reserve_amount2 = reserve::three_quarters)
+		container<T> set_union(const container<T, B0, C, B1>& other, F&& comparator_func, reserve::res_var<N1> reserve_amount1 = reserve::three_quarters(), reserve::res_var<N2> reserve_amount2 = reserve::three_quarters())
 		{
 			static_assert(!std::is_same<typename templ::sanitizer_t<F, T, T>, bool>::value, "Passed functor must have the following signature: bool(T, T).");
 
@@ -1292,7 +1292,7 @@ namespace cpplinq
 		/*=== JOIN OPERATORS ===*/
 
 		template <bool B0, class C, bool B1, typename FOuterKey, typename FInnerKey, typename FJoin, typename TInner, typename TKey = typename templ::sanitizer_t<FOuterKey, T>, typename TJoined = typename templ::sanitizer_t<FJoin, T, TInner>, std::size_t N>
-		container<TJoined> join(const container<TInner, B0, C, B1>& innerkeys, FOuterKey&& outerkeyselector, FInnerKey&& innerkeyselector, FJoin&& joiner, reserve::res_var<N> reserve_amount = reserve::one)
+		container<TJoined> join(const container<TInner, B0, C, B1>& innerkeys, FOuterKey&& outerkeyselector, FInnerKey&& innerkeyselector, FJoin&& joiner, reserve::res_var<N> reserve_amount = reserve::one())
 		{
 			static_assert(!std::is_same<TKey, void>::value, "Passed outer key selector must have the following signature: TKey(T), where TKey is any type implementing operator== and operator!= and T is the type of the values contained within this container.");
 			static_assert(!templ::is_comparable_v<TKey>, "The values returned by the outer key selector must implement operator== and operator!=.");
@@ -1320,7 +1320,7 @@ namespace cpplinq
 		}
 
 		template <bool B0, class C, bool B1, typename FOuterKey, typename FInnerKey, typename FJoin, typename TInner, typename TKey = typename templ::sanitizer_t<FOuterKey, T>, typename TJoined = typename templ::sanitizer_t<FJoin, T, templ::vector_iterator_t<TInner>, templ::vector_iterator_t<TInner>>, std::size_t N>
-		container<TJoined> group_join(const container<TInner, B0, C, B1>& innerkeys, FOuterKey&& outerkeyselector, FInnerKey&& innerkeyselector, FJoin&& joiner, reserve::res_var<N> reserve_amount = reserve::one)
+		container<TJoined> group_join(const container<TInner, B0, C, B1>& innerkeys, FOuterKey&& outerkeyselector, FInnerKey&& innerkeyselector, FJoin&& joiner, reserve::res_var<N> reserve_amount = reserve::one())
 		{
 			static_assert(!std::is_same<TKey, void>::value, "Passed outer key selector must have the following signature: TKey(T), where TKey is any type implementing operator== and operator!= and T is the type of the values contained within this container.");
 			static_assert(!templ::is_comparable_v<TKey>, "The values returned by the outer key selector must implement operator== and operator!=.");
