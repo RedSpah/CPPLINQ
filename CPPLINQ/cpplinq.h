@@ -72,7 +72,7 @@ namespace cpplinq
 		constexpr bool is_defined_v = is_valid_call<F, A...>::value;
 
 		template <typename T1, typename T2> struct plus { template <typename R = decltype(std::declval<T1>() + std::declval<T2>())> constexpr R operator()(const T1& L_, const T2& R_) { return L_ + R_; } using type = decltype(std::declval<T1>() + std::declval<T2>());};
-		template <typename T1, typename T2> struct mul { template <typename R = decltype(std::declval<T1>() * std::declval<T2>())> constexpr R operator()(const T1& L_, const T2& R_) { return L_ * R_; } using type = decltype(std::declval<T1>() * std::declval<T2>()); };
+		//template <typename T1, typename T2> struct mul { template <typename R = decltype(std::declval<T1>() * std::declval<T2>())> constexpr R operator()(const T1& L_, const T2& R_) { return L_ * R_; } using type = decltype(std::declval<T1>() * std::declval<T2>()); };
 
 		template <typename T1, typename T2> constexpr bool is_addable_v = is_defined_v<plus<T1, T2>, T1, T2>;
 		//template <typename T> constexpr bool is_addable_v = is_defined_v<std::plus<>, T, T>;
@@ -1061,7 +1061,7 @@ namespace cpplinq
 			return std::inner_product(begin(), begin() + std::min(size(), other.size()), other.begin(), starting_val, std::forward<F1>(func1), std::forward<F2>(func2));
 		}	
 		
-		template <bool B, typename C, bool C1, typename V, typename R = typename templ::sanitizer_t<templ::mul<T, T>, T, T>>
+		template <bool B, typename C, bool C1, typename V, typename R = typename templ::sanitizer_t<std::multiplies<>, T, T>>
 		V inner_product(const container<T, B, C, C1>& other, V starting_val)
 		{
 			static_assert(!std::is_void<R>::value, "The contained type must define operator* with itself.");
