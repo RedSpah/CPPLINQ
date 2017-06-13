@@ -725,7 +725,7 @@ namespace cpplinq
 		}
 
 		template <alloc_mode MemMode = alloc_mode::no_alloc, bool AllowAlloc = (MemMode == alloc_mode::auto_alloc), typename RetVal = typename std::conditional<IsRef && AllowAlloc, container<T>, container<T>&>::type, typename F, bool C2970 = templ::is_counter_func_v<F, T>>
-		RetVal take_while(F&& filter_func, reserve::res_var reserve_amount = reserve::third)
+		RetVal take_while(F&& filter_func, reserve::res_var reserve_amount = reserve::third) 
 		{
 			static_assert(templ::is_filter_v<F, T>, "Passed functor must have one of the following signatures: bool(T), bool(T, int), where T is the type of the contained values.");
 			static_assert(!IsRef || AllowAlloc, "Cannot call TakeWhile() on an container created from a referenced container, a Copy() is required first.");
